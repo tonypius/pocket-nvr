@@ -1,0 +1,185 @@
+#!/system/bin/sh
+# nvrctl — PocketNVR single control entrypoint (FR-SUP-7).
+# Runs on-device as root. Components are tracked by pidfiles; logs rotate
+# via logrotate-lite in Phase 5 (FR-SUP-6).
+#
+# Usage: nvrctl start|stop|restart|status|logs [component]
+# Components: mediamtx nvrd (detector joins in Phase 3, FR-SUP-1 order)
+# OPT_DAEMONS start/stop/watch like DAEMONS but stay skipped (quietly,
+# including in the watchdog) until their config exists: the cloudflared
+# tunnel (deploy/cloudflare/) only after setup.sh provisions it.
+
+BASE=/data/nvr
+BIN=$BASE/bin
+RUN=$BASE/run
+LOG=$BASE/logs
+DAEMONS="mediamtx nvrd detector"
+OPT_DAEMONS="tunnel"
+# nvrdet spawns `ffmpeg` for capture — always make our bin dir visible
+PATH=$BASE/bin:$PATH
+export PATH
+
+# argv0 of a running process: first NUL-separated field of its cmdline.
+argv0_of() {
+	tr '\0' '\n' <"/proc/$1/cmdline" 2>/dev/null | head -n 1
+}
+
+pid_of() {
+	[ -f "$RUN/$1.pid" ] || return 1
+	local pid want
+	pid=$(cat "$RUN/$1.pid" 2>/dev/null)
+	[ -n "$pid" ] && kill -0 "$pid" 2>/dev/null || return 1
+	# Pidfiles sit on persistent storage, so after a reboot or dead
+	# battery the recorded PID often belongs to an unrelated process
+	# (Android recycles PIDs fast during boot) — that would blind start
+	# and watch, and stop would kill an innocent process. Trust the
+	# pidfile only when it really is our binary (detector runs as nvrdet).
+	case "$1" in
+	detector) want=$BIN/nvrdet ;;
+	tunnel)   want=$BIN/cloudflared ;;
+	*) want=$BIN/$1 ;;
+	esac
+	[ "$(argv0_of "$pid")" = "$want" ] && echo "$pid"
+}
+
+# FR-SUP-6: cap every log at 5 MB, keeping the most recent 1 MB.
+rotate_logs() {
+	for f in "$LOG"/*.log; do
+		[ -f "$f" ] || continue
+		size=$(wc -c <"$f")
+		[ "$size" -gt 5242880 ] || continue
+		tail -c 1048576 "$f" >"$f.tmp" && cat "$f.tmp" >"$f" && rm -f "$f.tmp"
+	done
+}
+
+start_one() {
+	comp=$1
+	if pid=$(pid_of "$comp"); then
+		echo "$comp already running (pid $pid)"
+		return 0
+	fi
+	case "$comp" in
+	mediamtx)
+		nohup "$BIN/mediamtx" "$BASE/mediamtx.yml" >>"$LOG/mediamtx.log" 2>&1 &
+		;;
+	nvrd)
+		nohup "$BIN/nvrd" -config "$BASE" >>"$LOG/nvrd.log" 2>&1 &
+		;;
+	detector)
+		nohup "$BIN/nvrdet" -c "$BASE/detector.json" >>"$LOG/nvrdet.log" 2>&1 &
+		;;
+	tunnel)
+		# Design B edge (deploy/cloudflare/): outbound-only connection to
+		# Cloudflare; nvrd keeps binding LAN/loopback as before. Two modes:
+		# dashboard-managed (token.txt — ingress lives in the Zero Trust
+		# dashboard) or self-managed (tunnel.yml — setup.sh).
+		if [ -f "$BASE/cloudflare/token.txt" ]; then
+			nohup "$BIN/cloudflared" tunnel --no-autoupdate run --token-file "$BASE/cloudflare/token.txt" >>"$LOG/tunnel.log" 2>&1 &
+		elif [ -f "$BASE/cloudflare/tunnel.yml" ]; then
+			nohup "$BIN/cloudflared" tunnel --config "$BASE/cloudflare/tunnel.yml" --no-autoupdate run >>"$LOG/tunnel.log" 2>&1 &
+		else
+			echo "tunnel not configured — see deploy/cloudflare/README.md (skipped)"
+			return 1
+		fi
+		;;
+	*)
+		echo "unknown component: $comp" >&2
+		return 1
+		;;
+	esac
+	echo $! >"$RUN/$comp.pid"
+	echo "$comp started (pid $(cat "$RUN/$comp.pid"))"
+}
+
+stop_one() {
+	comp=$1
+	if pid=$(pid_of "$comp"); then
+		kill "$pid" 2>/dev/null
+		i=0
+		while kill -0 "$pid" 2>/dev/null && [ $i -lt 20 ]; do
+			sleep 0.5
+			i=$((i + 1))
+		done
+		kill -9 "$pid" 2>/dev/null
+		rm -f "$RUN/$comp.pid"
+		echo "$comp stopped"
+	else
+		rm -f "$RUN/$comp.pid"
+		echo "$comp not running"
+	fi
+}
+
+status_one() {
+	comp=$1
+	if pid=$(pid_of "$comp"); then
+		echo "$comp: running (pid $pid)"
+	else
+		echo "$comp: STOPPED"
+	fi
+}
+
+case "${1:-status}" in
+start)
+	for d in $DAEMONS $OPT_DAEMONS; do
+		[ -n "${2:-}" ] && [ "$d" != "$2" ] && continue
+		start_one "$d"
+	done
+	;;
+stop)
+	for d in $DAEMONS $OPT_DAEMONS; do
+		[ -n "${2:-}" ] && [ "$d" != "$2" ] && continue
+		stop_one "$d"
+	done
+	;;
+restart)
+	"$0" stop "${2:-}"
+	"$0" start "${2:-}"
+	;;
+status)
+	for d in $DAEMONS $OPT_DAEMONS; do
+		[ -n "${2:-}" ] && [ "$d" != "$2" ] && continue
+		status_one "$d"
+	done
+	;;
+logs)
+	comp="${2:-nvrd}"
+	tail -n "${3:-100}" "$LOG/$comp.log"
+	;;
+watch)
+	# FR-SUP-4 watchdog: liveness check every 15s, restart with exponential
+	# backoff (30s→600s cap); backoff resets once a daemon stays up 5 min.
+	# Also caps log sizes (FR-SUP-6).
+	while true; do
+		now=$(date +%s)
+		for d in $DAEMONS $OPT_DAEMONS; do
+			# optional components without their config are off on purpose
+			if [ "$d" = tunnel ] && [ ! -f "$BASE/cloudflare/tunnel.yml" ] \
+				&& [ ! -f "$BASE/cloudflare/token.txt" ]; then
+				continue
+			fi
+			if pid_of "$d" >/dev/null; then
+				# up: reset backoff entirely, including any stale
+				# restart deadline left over from the last outage
+				rm -f "$RUN/$d.att" "$RUN/$d.next"
+				continue
+			fi
+			att=$(cat "$RUN/$d.att" 2>/dev/null || echo 0)
+			att=$((att + 1))
+			echo "$att" >"$RUN/$d.att"
+			delay=$((att > 5 ? 600 : 30 * (1 << (att - 1))))
+			next=$(cat "$RUN/$d.next" 2>/dev/null || echo 0)
+			if [ "$now" -ge "$next" ]; then
+				echo "$(date '+%F %T') watchdog: $d down (attempt $att), restarting" >>"$LOG/supervisor.log"
+				start_one "$d"
+				echo "$((now + delay))" >"$RUN/$d.next"
+			fi
+		done
+		rotate_logs
+		sleep 15
+	done
+	;;
+*)
+	echo "usage: nvrctl start|stop|restart|status|logs|watch [component] [n]" >&2
+	exit 1
+	;;
+esac

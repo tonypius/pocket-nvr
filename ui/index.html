@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PocketNVR</title>
+<meta name="theme-color" content="#050505">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PocketNVR">
+<script>
+/* theme boot — before CSS to avoid a flash of the wrong theme (U12) */
+try {
+  var t = localStorage.getItem('pnvr_theme') ||
+    (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.dataset.theme = t;
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- login gate -->
+<div id="login" class="login hidden">
+  <div class="login-card">
+    <h1>PocketNVR</h1>
+    <p>Enter the API token from <code>/data/nvr/secrets.yaml</code> on the appliance.</p>
+    <input id="login-token" type="password" placeholder="API token" autocomplete="off">
+    <button id="login-btn" class="primary">Sign in</button>
+    <p id="login-err" class="err"></p>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">P<span>NVR</span></div>
+    <a href="#/home" data-route="home" class="nav"><span class="ico">⌂</span><span class="lbl">Home</span></a>
+    <a href="#/live" data-route="live" class="nav"><span class="ico">▦</span><span class="lbl">Live</span></a>
+    <a href="#/events" data-route="events" class="nav"><span class="ico">▤</span><span class="lbl">Events</span></a>
+    <a href="#/detections" data-route="detections" class="nav"><span class="ico">🔎</span><span class="lbl">Detections</span></a>
+    <a href="#/clips" data-route="clips" class="nav"><span class="ico">▶</span><span class="lbl">Clips</span></a>
+    <a href="#/settings" data-route="settings" class="nav"><span class="ico">⚙</span><span class="lbl">Settings</span></a>
+    <div class="side-flex"></div>
+    <button id="install-btn" class="nav install hidden">⤓ <span class="lbl">Install app</span></button>
+    <button id="theme-btn" class="nav theme-btn"><span class="ico" id="theme-ico">☾</span><span class="lbl">Theme</span></button>
+    <div class="side-status" id="health">…</div>
+  </aside>
+
+  <div class="maincol">
+    <header class="topbar">
+      <div class="topbar-title" id="page-title">Home</div>
+      <div class="topbar-actions">
+        <span id="offline-banner" class="offline hidden">offline</span>
+        <button id="top-install" class="ghost hidden">Install</button>
+        <button id="theme-btn2" class="ghost" title="Toggle theme">☾</button>
+      </div>
+    </header>
+
+    <main id="page"></main>
+  </div>
+
+  <nav class="tabbar">
+    <a href="#/home" data-route="home" class="tab"><span class="ico">⌂</span><span>Home</span></a>
+    <a href="#/live" data-route="live" class="tab"><span class="ico">▦</span><span>Live</span></a>
+    <a href="#/events" data-route="events" class="tab"><span class="ico">▤</span><span>Events</span></a>
+    <a href="#/settings" data-route="settings" class="tab"><span class="ico">⚙</span><span>Settings</span></a>
+  </nav>
+</div>
+
+<div id="update-toast" class="toast hidden">
+  Update available.
+  <button id="update-reload" class="primary">Reload</button>
+  <button id="update-dismiss" class="ghost">✕</button>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-sheet">
+    <button id="modal-close" class="ghost">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="vendor/hls.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+# PocketNVR main config (COMP-8, FRS §6.3). Copy to the device config dir.
+# Secrets live in secrets.yaml and are referenced as ${secret:key}.
+# Dev default below uses ./data as base; on the phone: /data/nvr.
+
+system:
+  base_path: ./data
+  log_level: info
+  wakelock: true
+  charge_cap_pct: 65
+  storage_min_free_gb: 8
+
+# MediaMTX endpoints (extension to FRS schema; defaults shown).
+media:
+  rtsp_address: ":8554"
+  webrtc_address: ":8889"
+  hls_address: ":8888"
+  auth_user: viewer
+
+cameras:
+  - id: front_tapo
+    name: Front Door
+    enabled: true
+    main_url: rtsp://127.0.0.1:8554/front_tapo
+    sub_url: rtsp://127.0.0.1:8554/front_tapo_sub
+    source_main: rtsp://${secret:front_user}:${secret:front_pass}@192.168.0.20:554/stream1
+    source_sub: rtsp://${secret:front_user}:${secret:front_pass}@192.168.0.20:554/stream2
+    detect:
+      fps: 5
+      threshold: 0.5
+      enter_frames: 3
+      exit_frames: 8
+      motion_min_area: 0.02
+      anchor: bottom_center
+      zones: []   # empty = whole frame (OQ-5 default)
+
+  - id: back_cpplus
+    name: Back Yard
+    enabled: false
+    main_url: rtsp://127.0.0.1:8554/back_cpplus
+    sub_url: rtsp://127.0.0.1:8554/back_cpplus_sub
+    source_main: rtsp://${secret:back_user}:${secret:back_pass}@192.168.0.21:554/cam/realmonitor?channel=1&subtype=0
+    source_sub: rtsp://${secret:back_user}:${secret:back_pass}@192.168.0.21:554/cam/realmonitor?channel=1&subtype=1
+
+recording:
+  mode: continuous        # or event_only (FR-MED-6, flash-wear option)
+  segment_seconds: 300
+  retention_days: 7
+  size_cap_gb: 24         # must fit the phone: keep below disk size minus storage_min_free_gb
+
+events:
+  clip_pre_seconds: 5
+  clip_post_seconds: 10
+  retention_days: 30
+  retention_max_count: 5000
+
+detection:
+  model: yolo11n
+  input_size: 640
+  backend: cpu            # benchmarked 2026-09: CPU 88ms vs Vulkan 335ms/frame
+  queue_max: 32           # on Adreno 640 @640px — flip to vulkan to re-test;
+  temp_high_c: 75         # int8 / smaller input_size may reverse it
+  temp_low_c: 65
+
+notifications:
+  provider: ntfy           # ntfy | telegram | both
+  cooldown_seconds: 60
+  # Public UI origin for push deep links (deploy/cloudflare/): set to
+  # https://nvr.example.com once the Cloudflare tunnel + Access are live.
+  base_url: ""
+  quiet_hours:
+    start: "23:00"
+    end: "06:30"
+
+api:
+  bind: "0.0.0.0:8099"
+  auth: token
+
+remote:
+  tailscale: true
