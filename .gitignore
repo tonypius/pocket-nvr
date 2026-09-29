@@ -1,0 +1,27 @@
+# macOS cruft
+.DS_Store
+
+# build outputs
+dist/
+data/
+*.log
+auto.crt
+auto.key
+
+# secrets — never commit (FR-CFG-2)
+config/secrets.yaml
+
+# vendored binaries are fetched by scripts/fetch-mediamtx.sh, but keep the
+# pinned version once fetched? No: dist-adjacent, re-fetchable → ignore
+third_party/mediamtx/
+
+# model pipeline artifacts (re-fetchable via scripts/fetch_model.sh)
+models/.venv/
+models/yolo11n.pt
+models/yolo11n_ncnn_model/
+models/runs/
+
+# build outputs / vendored sources (re-fetchable, large)
+detector/build*/
+build/
+third_party/

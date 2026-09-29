@@ -1,0 +1,6 @@
+id=pocketnvr
+name=PocketNVR
+version=v0.1.0
+versionCode=1
+author=Tony
+description=Headless NVR appliance: MediaMTX ingest/record, detector, event/API daemon. See NVR-FRS.md (COMP-1 supervision; hardened in Phase 5).
