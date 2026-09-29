@@ -1,5 +1,7 @@
 # PocketNVR
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Turn a spare rooted Android phone into a self-hosted NVR (network video recorder) appliance: continuous recording for IP cameras, **on-device AI person/object detection**, event snapshots and clips, push notifications, and an installable web UI — with no cloud dependency and no footage ever leaving your network.
 
 It is **not an Android app**. It is a set of native arm64 Linux daemons that run as root on Android (via Magisk supervision): [MediaMTX](https://github.com/bluenviron/mediamtx) for RTSP ingest/recording/restreaming, a single static Go binary (`nvrd`) for the event store, notifications, REST API and web UI, and a C++ detector (`nvrdet`) using [NCNN](https://github.com/Tencent/ncnn) with a YOLO11n model.
