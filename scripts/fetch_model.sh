@@ -2,7 +2,7 @@
 # Fetch YOLO11n and export to NCNN (models/yolo11n/{yolo11n.param,yolo11n.bin}).
 # Uses a local venv (models/.venv, gitignored) with ultralytics + ncnn.
 # License note (FLAG-11): YOLO11n weights are AGPL-3.0 — fine for personal
-# use; revisit before any distribution.
+# use; not committed to the repo — each user generates them locally.
 # Usage: scripts/fetch_model.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
