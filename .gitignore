@@ -23,8 +23,12 @@ models/runs/
 
 # build outputs / vendored sources (re-fetchable, large)
 detector/build*/
-build/
-third_party/
+/build/
+/third_party/
 
 # model weights (AGPL-3.0, Ultralytics) — generated locally by scripts/fetch_model.sh
 models/yolo11n/
+
+# Ultralytics sample image + derived test frames (fetched/generated locally)
+models/bus.*
+models/bus360.*

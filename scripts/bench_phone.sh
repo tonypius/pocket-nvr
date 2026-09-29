@@ -15,6 +15,12 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 true # no-op placeholder for symmetry
 (cd "$ROOT/detector" && cmake --build build-android-ncnn --target vulkan_smoke -j 8 >/dev/null)
 adb shell "mkdir -p $D" >/dev/null
 adb push "$ROOT/detector/build-android-ncnn/vulkan_smoke" "$D/" >/dev/null
+# test frame: ultralytics sample from the export venv (scripts/fetch_model.sh) → 640x640 raw BGR
+if [ ! -f "$ROOT/models/bus.bgr" ]; then
+	SRC="$(find "$ROOT/models/.venv" -name bus.jpg | head -1)"
+	[ -n "$SRC" ] || { echo "run scripts/fetch_model.sh first (provides the sample image)"; exit 1; }
+	ffmpeg -loglevel error -y -i "$SRC" -vf scale=640:640 -pix_fmt bgr24 -f rawvideo "$ROOT/models/bus.bgr"
+fi
 [ -f "$D/bus.bgr" ] || adb push "$ROOT/models/bus.bgr" "$D/" >/dev/null
 [ -f "$D/yolo11n.param" ] || adb push "$ROOT/models/yolo11n/yolo11n.param" "$ROOT/models/yolo11n/yolo11n.bin" "$D/" >/dev/null
 

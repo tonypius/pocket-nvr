@@ -11,7 +11,7 @@ It is **not an Android app**. It is a set of native arm64 Linux daemons that run
 - **Events** — SQLite event store, peak-frame snapshot with detection-box overlay, cropped object thumbnails, per-event MP4 clips
 - **Notifications** — ntfy and/or Telegram with score thresholds, cooldowns, quiet hours, and a retry queue that replays undelivered events after restart
 - **Web UI (PWA)** — installable from the browser; Home dashboard, Live view (WebRTC/WHEP with an HLS proxy fallback), Events, Detections grid, a Clips feed that plays event clips inline, and full Settings (camera add/edit, ONVIF/RTSP LAN discovery, secrets editor) — all hot-reloading, dark/light theme included
-- **Appliance ops** — boot-time auto-start + watchdog with restart backoff, log rotation, retention by age/size/count, free-space guard that pauses recording before the disk fills, SoC thermal governor, wakelock, and battery charge cap (ACC) for 24/7 unattended duty
+- **Appliance ops** — boot-time auto-start + watchdog with restart backoff, log rotation, retention by age/size/count, free-space guard that pauses recording before the disk fills, SoC thermal governor, wakelock, and a configurable charge-cap setting for 24/7 unattended duty
 - **Security** — token auth on every API route, write-only secrets, redacted config reads; remote access via Tailscale or any TCP-only tunnel (the HLS proxy works where WebRTC UDP cannot)
 
 ## Architecture
@@ -31,40 +31,131 @@ It is **not an Android app**. It is a set of native arm64 Linux daemons that run
    • retention + free-space guard     • static web UI + HLS/WHEP/playback proxies
 ```
 
-## Requirements
+## Prerequisites
 
-**Target device** — any rooted Android phone or tablet with a 64-bit ARM CPU, Android 10+, Magisk (root), 32 GB+ storage, and a permanent power source. Detection runs comfortably on a mid-range SoC; see [Performance](#performance).
+### The phone (the NVR itself)
 
-**Cameras** — any IP camera or NVR with an RTSP stream. A sub-stream is strongly recommended: only the sub-stream is decoded for analysis; the main stream is recorded.
+PocketNVR runs native daemons as root, so the phone must be **rooted with Magisk**. Rooting wipes the device and can void the warranty, so use a spare phone, not your daily driver.
 
-**Build host** — Go 1.25+, Android NDK r27+, CMake + clang, ffmpeg, and `adb`.
+| Requirement | Details |
+|---|---|
+| CPU / OS | 64-bit ARM (arm64-v8a), Android 10 or newer |
+| Root | **Magisk** installed and working (`su` available). The boot module is installed through Magisk. |
+| Bootloader | Unlocked. This is normally needed to install Magisk. |
+| Developer options | **USB debugging** enabled |
+| Superuser for adb | In Magisk → Superuser, grant the **Shell** app root. `deploy.sh` stops with "su not elevated" if you skip this. |
+| Storage | 32 GB or more. Recordings live in `/data/nvr/recordings`, so size `recording.size_cap_gb` to fit. |
+| Power | Permanently plugged in. A 24/7 phone with a battery that is always at 100% swells over time, so also consider capping the charge. Pair it with a charge-limiting module such as [ACC](https://github.com/VR-25/acc) (a separate Magisk module, not bundled). |
+| Network | Same LAN as your cameras. A static IP or DHCP reservation for the phone is recommended. |
 
-## Quickstart
+Any recent mid-range phone works. The author's test device is a 2019-era Snapdragon phone (see [Performance](#performance)).
+
+### Your cameras
+
+Any IP camera or NVR that serves **RTSP**. You need each camera's RTSP URL, plus a username and password if it requires one. A **sub-stream** (low resolution) is strongly recommended: only the sub-stream is decoded for AI analysis, and the main stream is recorded untouched. Tapo, Dahua/CP Plus and Hikvision cameras all work this way. Enable RTSP or "camera account" in the camera's own app first.
+
+### Your computer (the build host)
+
+The phone runs pre-built binaries that you cross-compile and push over adb, so you need a computer on the same network as (or USB-attached to) the phone. macOS is what the project is developed on. Linux should work but is less tested.
+
+| Tool | Used for | Install (macOS / Homebrew) |
+|---|---|---|
+| Go 1.25+ | `nvrd` daemon | `brew install go` |
+| Android NDK r27+ | C++ detector | Android Studio → SDK Manager → NDK, or [download](https://developer.android.com/ndk/downloads) |
+| CMake + git | detector and NCNN build | `brew install cmake git` |
+| adb | pushing to the phone | `brew install android-platform-tools` |
+| Python 3.10–3.12 | exporting the model | `brew install python@3.12` |
+| curl, zip, ffmpeg | fetch scripts, boot module, tests | `brew install ffmpeg` (curl/zip ship with macOS) |
+| Docker (optional) | `build_arm64.sh --docker` validation only | Docker Desktop |
+
+## Getting started
+
+Do this on your computer, from the repo root. Each step is a script in `scripts/`.
+
+### 1. Prepare the phone
+
+1. Root it with Magisk (see the [Magisk install guide](https://topjohnwu.github.io/Magisk/install.html) for your model).
+2. Enable Developer options → **USB debugging**, plug the phone into your computer, and accept the RSA prompt on the phone.
+3. Check adb sees it, then check root works:
+
+   ```bash
+   adb devices                     # should list your phone as "device"
+   adb shell su -c id              # accept the Magisk prompt; expect uid=0(root)
+   ```
+
+   For a wireless connection, use Developer options → Wireless debugging, then `adb pair` and `adb connect`.
+
+### 2. Fetch dependencies
 
 ```bash
-# 1. Fetch vendored dependencies (MediaMTX, static ffmpeg, YOLO11n → NCNN export)
-scripts/fetch-mediamtx.sh
-scripts/fetch-ffmpeg.sh
-scripts/fetch_model.sh
+scripts/fetch-mediamtx.sh        # MediaMTX RTSP server (linux/arm64 for the phone)
+scripts/fetch-ffmpeg.sh          # static arm64 ffmpeg used by the detector
+scripts/fetch_model.sh           # downloads YOLO11n and exports it to NCNN
+```
 
-# 2. Configure
-cp config/secrets.yaml.example config/secrets.yaml   # then edit: set api_token + camera creds
-$EDITOR config/config.yaml                           # cameras, retention, detection tuning
+`fetch_model.sh` creates a Python virtualenv in `models/.venv` and pulls in `ultralytics`, which is large (it includes PyTorch), so allow a few minutes. The model weights are AGPL-3.0 and are generated on your machine rather than shipped in this repo (see [License](#license)).
 
-# 3. Build and deploy to the phone over adb (USB or wireless)
+### 3. Build the detector
+
+```bash
+export ANDROID_NDK=~/Library/Android/ndk/android-ndk-r27c   # adjust to your NDK path
+scripts/build_detector_android.sh
+```
+
+This clones NCNN, cross-compiles it for arm64 Android, then builds `nvrdet`. The first run takes a while. It writes `detector/build-android-ncnn/nvrdet`, which `deploy.sh` picks up automatically. If you skip this step, deployment still works but without AI detection (recording and live view only).
+
+### 4. Deploy to the phone
+
+```bash
 scripts/deploy.sh --start
-
-# 4. Open the UI from any device on the LAN
-open http://<phone-ip>:8099/          # sign in with your api_token
 ```
 
-`deploy.sh` cross-compiles the Go daemon (static, CGO-free), verifies ELF artifacts, pushes binaries + UI + model to the phone, installs to `/data/nvr`, generates the MediaMTX and detector runtime configs, and starts everything via `nvrctl`.
-
-To make the appliance survive reboots unattended, install the Magisk boot module:
+This builds `nvrd` for arm64, pushes everything to `/data/nvr` on the phone, and starts the daemons. On first install it generates a random API token on the device and prints it at the end (`api_token: …`). **Copy that token**, since you sign in with it. To see it again later:
 
 ```bash
-scripts/install_boot_module.sh        # add --reboot to run the boot acceptance test
+adb shell su -c 'grep api_token /data/nvr/secrets.yaml'
 ```
+
+### 5. Open the UI and add your cameras
+
+Find the phone's IP address (Settings → About phone → Status, or `adb shell ip route`), then open `http://<phone-ip>:8099/` in a browser on the same network and sign in with the token. You can install it as an app from the browser menu ("Add to Home screen").
+
+Then, in **Settings**:
+
+1. Use **Discover** to scan the LAN for ONVIF/RTSP cameras, or add one by hand.
+2. Enter each camera's main and sub-stream RTSP URLs.
+3. Set the camera username and password in the **Secrets** editor. The shipped placeholders are `front_user`/`front_pass` and `back_user`/`back_pass`, with the value `changeme`.
+4. Save. Changes hot-reload with no restart. Live view, events and clips appear in the other tabs.
+
+The default `config/config.yaml` is only an example (two sample cameras at `192.168.0.20` and `.21`, the second disabled). You can also edit `/data/nvr/config.yaml` on the phone directly and run `adb shell su -c '/data/nvr/bin/nvrctl restart'`.
+
+### 6. Make it survive reboots
+
+```bash
+scripts/install_boot_module.sh            # add --reboot to prove it starts unattended
+```
+
+This packages and installs a Magisk module that starts everything after boot and runs a watchdog. Confirm with:
+
+```bash
+adb shell su -c '/data/nvr/bin/nvrctl status'
+```
+
+### Notifications (optional)
+
+Put `ntfy_topic_url`, or `telegram_bot_token` and `telegram_chat_id`, into the Secrets editor, then enable the provider in Settings. For access from outside your home, use Tailscale, or the Cloudflare Tunnel setup in [deploy/cloudflare/](deploy/cloudflare/README.md). Never forward port 8099 to the internet.
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `no authorized device` | Re-plug USB, accept the RSA prompt, run `adb devices`. |
+| `su not elevated` | Magisk → Superuser → grant **Shell**. |
+| `run scripts/fetch-mediamtx.sh first` | Do step 2. |
+| `(detector not built yet — skipping…)` | Do step 3, then re-run `deploy.sh --start`. |
+| Camera shows offline | Test the RTSP URL in VLC from your computer first. Check credentials and that the camera is enabled. |
+| Can't reach the UI | Phone and computer must be on the same network. Check `nvrctl status` and that nothing blocks port 8099. |
+| Logs | `adb shell su -c '/data/nvr/bin/nvrctl logs'` |
 
 ## Configuration
 
@@ -131,7 +222,7 @@ Device layout after deploy:
 - **Boot & watchdog** — the Magisk module starts everything after reboot (well under a minute) and runs `nvrctl watch`: exponential-backoff restarts and 5 MB log caps.
 - **Retention** — events pruned by age and count; recordings by age and size. DB rows and their files die together.
 - **Free-space guard** — below the configured floor it prunes, then pauses continuous recording via MediaMTX hot-reload while keeping detection alive; health reports `degraded` until space recovers.
-- **Power** — wakelock keeps the SoC awake; an optional ACC integration holds the battery in a healthy charge band for always-plugged-in duty.
+- **Power** — wakelock keeps the SoC awake; for always-plugged-in duty, pair it with a charge-limiting Magisk module such as ACC (not bundled) to keep the battery in a healthy band.
 
 ## Development
 
