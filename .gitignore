@@ -25,3 +25,6 @@ models/runs/
 detector/build*/
 build/
 third_party/
+
+# model weights (AGPL-3.0, Ultralytics) — generated locally by scripts/fetch_model.sh
+models/yolo11n/

@@ -160,4 +160,6 @@ The detector is plain C++17 (CMake): Mac/desktop builds for development, an NDK 
 
 ## License
 
-No license yet — add one before publishing (MIT/Apache-2.0 are typical for code; note YOLO11/Ultralytics is AGPL-3.0, which covers the model files).
+The code in this repository is released under the [MIT License](LICENSE).
+
+The YOLO11n model weights are **not** included. Run `scripts/fetch_model.sh` to download and export them on your own machine. They come from Ultralytics and are licensed AGPL-3.0, which is separate from this repo's license; check those terms before distributing the weights or offering a service built on them.
