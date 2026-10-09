@@ -27,6 +27,7 @@ fi
 cat > "$DIST/bench.sh" <<EOF
 #!/system/bin/sh
 D=$D
+REPEATS=$REPEATS
 chmod 755 \$D/vulkan_smoke
 echo "== vulkan steady-state (\$REPEATS runs):"
 \$D/vulkan_smoke \$D \$D/bus.bgr 640 640 vulkan \$REPEATS | tail -2

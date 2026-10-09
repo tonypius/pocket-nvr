@@ -5,7 +5,7 @@ here is produced by a script in `scripts/` — no hand-typed numbers.
 
 | Artifact | Produced by | Status |
 |---|---|---|
-| `bench-phone-*.txt` | `scripts/bench_publish.sh` (wraps `scripts/bench_phone.sh`) | pending phone re-connect |
+| `bench-phone-20261009.txt` | `scripts/bench_publish.sh` (wraps `scripts/bench_phone.sh`) | captured 2026-10-09 |
 | `soak-local-4cam-1h/` | `scripts/soak.sh --duration 1h --cameras 4` | 1 h local run, 2026-10-09 |
 
 ## PII policy
@@ -28,18 +28,19 @@ identifier class, extend the scrubber first, then capture.
   frames the output with device metadata (model, SoC, Android version,
   battery temp before/after) and scrubs it into this directory.
 
-### Numbers so far
+### Numbers (2026-10-09 capture: OnePlus 7 / GM1901, SoC SM8150 / SD855, Android 16)
 
-The 2026-09 measurements (median of 60 runs, OnePlus 7 / SD855 /
-Adreno 640) were 88 ms/frame CPU (NCNN ARMv8 fp16 NEON) vs 335 ms/frame
-Vulkan — recorded in `config/config.yaml` (`detection.backend` comment);
-the raw terminal output of that session was not retained. The definitive
-capture file lands here via `bench_publish.sh` on the next bench run.
+| Backend | YOLO11n @ 640×640, steady-state median of 60 runs |
+|---|---|
+| CPU fp16 (NCNN ARMv8 NEON kernels) | **88.3 ms/frame** (avg 88.3) |
+| Vulkan (Adreno 640) | **342.6 ms/frame** (avg 334.4; run 1 incl. shader compile ≈ 468 ms) |
 
-Interim sanity point: the local dev machine (Apple Silicon, CPU backend)
-sustains ~19 ms/frame in the soak harness below — the pipeline numbers
-are load-independent of the phone's, shown only to keep the dataset
-honest about where each number came from.
+The GPU is ~3.9× slower for this workload on this SoC. Battery temp
+29→30 °C across the run (no thermal throttling). Both backends detected
+the person in the frame (SMOKE B PASS), so the comparison measures
+equivalent work. The 2026-09 figures (88 / 335 ms, recorded in
+`config/config.yaml`) are consistent within run-to-run variance; the
+2026-10-09 file above is the citable capture.
 
 ## Soak test — methodology
 

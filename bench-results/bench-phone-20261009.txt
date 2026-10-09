@@ -1,0 +1,16 @@
+# PocketNVR inference benchmark — 2026-10-09 17:55:39 local
+# device=GM1901 (OnePlus7) soc=SM8150 android=16
+# model=yolo11n input=640x640 backend runs=60 (steady-state = median of last half)
+# battery_temp_start=29C
+# reproduce: scripts/bench_phone.sh 60
+# battery_temp_end=30C
+== vulkan steady-state (60 runs):
+[0 Adreno (TM) 640]  queueC=0[3]  queueT=0[3]  rebar=1  r-score=9
+[0 Adreno (TM) 640]  fp16-p/s/u/a=1/0/0/0  int8-p/s/u/a=1/0/0/1  bf16-p/s=1/0
+[0 Adreno (TM) 640]  subgroup=64(64~128)  ops=1/1/1/1/1/1/0/0/0/0
+[0 Adreno (TM) 640]  fp16-cm=0  int8-cm=0  bf16-cm=0  fp8-cm=0
+avg_infer_ms=334.4  steady_median_ms=342.6  over 60 runs
+SMOKE B: PASS (backend=vulkan)
+== cpu steady-state (60 runs):
+avg_infer_ms=88.3  steady_median_ms=88.3  over 60 runs
+SMOKE B: PASS (backend=cpu)
