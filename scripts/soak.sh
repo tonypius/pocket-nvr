@@ -70,16 +70,21 @@ trap cleanup EXIT
 
 METRICS_URL="http://127.0.0.1:8099/api/metrics"
 RSS_MODE=local
+KERNEL="$(uname -srm)"
 
 if [ "$TARGET" = phone ]; then
   adb get-state >/dev/null 2>&1 || { echo "no device (adb unauthorized?)"; exit 1; }
   adb forward tcp:18099 tcp:8099 >/dev/null
   METRICS_URL="http://127.0.0.1:18099/api/metrics"
-  # real token lives on the phone; never echoed, never written to $OUT
-  TOKEN=$(adb shell su -c "grep '^api_token:' /data/nvr/config/secrets.yaml" \
-          | head -1 | tr -d '\r' | awk '{print $2}')
+  # real token lives on the phone (config sits at /data/nvr root, not in a
+  # config/ subdir like the dev tree); never echoed, never written to $OUT.
+  # The trailing `true` keeps the device shell exit 0 — one of the two
+  # paths not existing must not abort this pipeline (set -o pipefail).
+  TOKEN=$(adb shell su -c "cat /data/nvr/secrets.yaml /data/nvr/config/secrets.yaml 2>/dev/null; true" \
+          | { grep '^api_token:' || true; } | head -1 | tr -d '\r' | awk '{print $2}')
   [ -n "$TOKEN" ] || { echo "no api_token on device"; exit 1; }
   RSS_MODE=phone
+  KERNEL=$(adb shell su -c "uname -srm" | tr -d '\r')  # device, not host
   KILL_TEST=0
 else
   MTX="$ROOT/third_party/mediamtx/current/darwin_arm64/mediamtx"
@@ -239,7 +244,7 @@ done
 
 echo "== run complete; summary"
 REV=$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)
-python3 - "$TSV" "$OUT/summary.txt" "$TARGET" "$CAMERAS" "$DUR" "$SAMPLE" "$RESTARTS" "$REV" "$(uname -srm)" <<'PY'
+python3 - "$TSV" "$OUT/summary.txt" "$TARGET" "$CAMERAS" "$DUR" "$SAMPLE" "$RESTARTS" "$REV" "$KERNEL" <<'PY'
 import sys
 tsv, out, target, cams, dur, sample, restarts, rev, kernel = sys.argv[1:10]
 rows = [l.rstrip("\n").split("\t") for l in open(tsv) if l.startswith("20")]

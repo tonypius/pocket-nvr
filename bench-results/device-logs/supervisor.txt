@@ -1,0 +1,258 @@
+2026-09-08 18:51:22 service.sh: waiting for boot_completed
+2026-09-08 18:51:34 service.sh: waiting for network
+2026-09-08 18:53:35 service.sh: wakelock acquired
+{"time":"2026-09-08T13:23:35.230128698Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-08T13:23:35.236109636Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-08T13:23:35.247202136Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-08T13:23:35.250603229Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-08 18:53:35 service.sh: starting daemons + watchdog
+2026-09-08 18:53:35 service.sh: boot sequence done
+2026-09-08 18:54:47 service.sh: waiting for boot_completed
+2026-09-08 18:54:59 service.sh: waiting for network
+2026-09-08 18:54:59 service.sh: network is up
+2026-09-08 18:54:59 service.sh: wakelock acquired
+{"time":"2026-09-08T13:24:59.744145254Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-08T13:24:59.750536036Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-08T13:24:59.759233484Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-08T13:24:59.762547234Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-08 18:54:59 service.sh: starting daemons + watchdog
+2026-09-08 18:54:59 service.sh: boot sequence done
+2026-09-09 10:43:58 service.sh: waiting for boot_completed
+2026-09-09 10:44:08 service.sh: waiting for network
+2026-09-09 10:44:08 service.sh: network is up
+2026-09-09 10:44:08 service.sh: wakelock acquired
+/data/adb/modules/pocketnvr/service.sh: line 42: /data/nvr/bin/nvrd: not found
+/data/adb/modules/pocketnvr/service.sh: line 43: /data/nvr/bin/nvrd: not found
+2026-09-09 10:44:08 service.sh: starting daemons + watchdog
+2026-09-09 10:44:08 service.sh: boot sequence done
+2026-09-09 10:44:08 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 10:44:39 watchdog: nvrd down (attempt 3), restarting
+2026-09-09 10:46:41 watchdog: nvrd down (attempt 11), restarting
+2026-09-09 10:51:01 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 10:51:01 watchdog: detector down (attempt 1), restarting
+2026-09-09 10:58:08 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 10:58:08 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 10:58:08 watchdog: detector down (attempt 1), restarting
+2026-09-09 11:49:01 service.sh: waiting for boot_completed
+2026-09-09 11:49:13 service.sh: waiting for network
+2026-09-09 11:49:13 service.sh: network is up
+2026-09-09 11:49:13 service.sh: wakelock acquired
+{"time":"2026-09-09T06:19:13.382383379Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T06:19:13.390835358Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-09T06:19:13.403072442Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T06:19:13.407745775Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-09 11:49:13 service.sh: starting daemons + watchdog
+2026-09-09 11:49:13 service.sh: boot sequence done
+2026-09-09 14:52:38 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 14:52:38 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 14:52:38 watchdog: detector down (attempt 1), restarting
+2026-09-09 15:09:02 service.sh: waiting for boot_completed
+2026-09-09 15:09:14 service.sh: waiting for network
+2026-09-09 15:09:14 service.sh: network is up
+2026-09-09 15:09:14 service.sh: wakelock acquired
+{"time":"2026-09-09T09:39:14.803460879Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T09:39:14.811122181Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-09T09:39:14.819631817Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T09:39:14.822915254Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-09 15:09:14 service.sh: starting daemons + watchdog
+2026-09-09 15:09:14 service.sh: boot sequence done
+2026-09-09 16:26:02 service.sh: waiting for boot_completed
+2026-09-09 16:26:14 service.sh: waiting for network
+2026-09-09 16:26:14 service.sh: network is up
+2026-09-09 16:26:14 service.sh: wakelock acquired
+{"time":"2026-09-09T10:56:14.661081712Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T10:56:14.664747702Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-09T10:56:14.671171348Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T10:56:14.672166608Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-09 16:26:14 service.sh: starting daemons + watchdog
+2026-09-09 16:26:14 service.sh: boot sequence done
+2026-09-09 17:08:27 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 17:08:27 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 17:08:27 watchdog: detector down (attempt 1), restarting
+2026-09-09 17:08:58 watchdog: detector down (attempt 3), restarting
+2026-09-09 17:11:46 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 17:11:46 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 17:11:46 watchdog: detector down (attempt 1), restarting
+2026-09-09 17:12:16 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 17:12:16 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 17:12:16 watchdog: detector down (attempt 1), restarting
+2026-09-09 17:13:10 service.sh: waiting for boot_completed
+2026-09-09 17:13:20 service.sh: waiting for network
+2026-09-09 17:13:20 service.sh: network is up
+2026-09-09 17:13:20 service.sh: wakelock acquired
+{"time":"2026-09-09T11:43:20.33355963Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T11:43:20.34109239Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-09T11:43:20.347427911Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T11:43:20.350108484Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-09 17:13:20 service.sh: starting daemons + watchdog
+2026-09-09 17:13:20 service.sh: boot sequence done
+2026-09-09 17:13:51 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 17:13:51 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 17:13:51 watchdog: detector down (attempt 1), restarting
+2026-09-09 17:15:37 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 17:15:38 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 17:15:53 watchdog: detector down (attempt 1), restarting
+2026-09-09 17:16:08 watchdog: nvrd down (attempt 3), restarting
+2026-09-09 17:18:10 watchdog: nvrd down (attempt 11), restarting
+2026-09-09 17:18:33 service.sh: waiting for boot_completed
+2026-09-09 17:18:45 service.sh: waiting for network
+2026-09-09 17:18:45 service.sh: network is up
+2026-09-09 17:18:45 service.sh: wakelock acquired
+{"time":"2026-09-09T11:48:45.566933067Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T11:48:45.573821087Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-09T11:48:45.582533535Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-09T11:48:45.586134525Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-09 17:18:45 service.sh: starting daemons + watchdog
+2026-09-09 17:18:45 service.sh: boot sequence done
+2026-09-09 17:19:01 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 17:19:01 watchdog: detector down (attempt 1), restarting
+2026-09-09 17:23:51 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 17:23:51 watchdog: detector down (attempt 1), restarting
+2026-09-09 17:28:10 watchdog: nvrd down (attempt 37), restarting
+2026-09-09 17:28:25 watchdog: mediamtx down (attempt 1), restarting
+2026-09-09 17:28:26 watchdog: detector down (attempt 1), restarting
+2026-09-09 17:33:46 watchdog: detector down (attempt 1), restarting
+2026-09-09 18:06:03 watchdog: detector down (attempt 1), restarting
+2026-09-09 18:24:53 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 18:53:52 watchdog: nvrd down (attempt 1), restarting
+2026-09-09 19:55:24 watchdog: detector down (attempt 1), restarting
+2026-09-09 20:56:55 watchdog: detector down (attempt 1), restarting
+2026-09-09 20:57:26 watchdog: detector down (attempt 3), restarting
+2026-09-10 09:24:42 watchdog: nvrd down (attempt 1), restarting
+2026-09-10 09:24:42 watchdog: detector down (attempt 1), restarting
+2026-09-10 09:33:21 watchdog: nvrd down (attempt 1), restarting
+2026-09-10 09:33:51 watchdog: nvrd down (attempt 3), restarting
+2026-09-10 09:35:53 watchdog: nvrd down (attempt 11), restarting
+2026-09-10 09:46:04 watchdog: nvrd down (attempt 51), restarting
+2026-09-10 09:54:28 watchdog: mediamtx down (attempt 1), restarting
+2026-09-10 09:54:29 watchdog: detector down (attempt 1), restarting
+2026-09-10 09:56:15 watchdog: nvrd down (attempt 91), restarting
+2026-09-10 10:06:26 watchdog: nvrd down (attempt 131), restarting
+2026-09-10 10:16:38 watchdog: nvrd down (attempt 171), restarting
+2026-09-10 10:26:49 watchdog: nvrd down (attempt 211), restarting
+2026-09-10 10:37:00 watchdog: nvrd down (attempt 251), restarting
+2026-09-10 10:47:11 watchdog: nvrd down (attempt 291), restarting
+2026-09-10 10:47:41 watchdog: mediamtx down (attempt 1), restarting
+2026-09-10 10:47:41 watchdog: detector down (attempt 1), restarting
+2026-09-10 10:57:21 watchdog: nvrd down (attempt 26), restarting
+2026-09-13 11:58:44 service.sh: waiting for boot_completed
+2026-09-13 11:58:56 service.sh: waiting for network
+2026-09-13 11:58:56 service.sh: network is up
+2026-09-13 11:58:56 service.sh: wakelock acquired
+{"time":"2026-09-13T06:28:56.337274265Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-13T06:28:56.343928848Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-13T06:28:56.353991869Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-13T06:28:56.357906765Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-13 11:58:56 service.sh: starting daemons + watchdog
+2026-09-13 11:58:56 service.sh: boot sequence done
+2026-09-15 14:03:38 service.sh: waiting for boot_completed
+2026-09-15 14:03:48 service.sh: waiting for network
+2026-09-15 14:03:48 service.sh: network is up
+2026-09-15 14:03:48 service.sh: wakelock acquired
+{"time":"2026-09-15T08:33:48.200236349Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-15T08:33:48.204607963Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-15T08:33:48.211993484Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-15T08:33:48.214835776Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-15 14:03:48 service.sh: starting daemons + watchdog
+2026-09-15 14:03:48 service.sh: boot sequence done
+2026-09-17 09:17:20 service.sh: waiting for boot_completed
+2026-09-17 09:17:32 service.sh: waiting for network
+2026-09-17 09:17:32 service.sh: network is up
+2026-09-17 09:17:32 service.sh: wakelock acquired
+{"time":"2026-09-17T03:47:32.463338171Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-17T03:47:32.470049837Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-17T03:47:32.484066921Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-17T03:47:32.487563952Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-17 09:17:32 service.sh: starting daemons + watchdog
+2026-09-17 09:17:32 service.sh: boot sequence done
+2026-09-18 18:58:14 service.sh: waiting for boot_completed
+2026-09-18 18:58:24 service.sh: waiting for network
+2026-09-18 18:58:24 service.sh: network is up
+2026-09-18 18:58:24 service.sh: wakelock acquired
+{"time":"2026-09-18T13:28:24.224705619Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-18T13:28:24.231117599Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-18T13:28:24.239373588Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-18T13:28:24.242426974Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-18 18:58:24 service.sh: starting daemons + watchdog
+2026-09-18 18:58:24 service.sh: boot sequence done
+2026-09-23 17:47:44 service.sh: waiting for boot_completed
+2026-09-23 17:47:56 service.sh: waiting for network
+2026-09-23 17:47:56 service.sh: network is up
+2026-09-23 17:47:56 service.sh: wakelock acquired
+{"time":"2026-09-23T12:17:56.994274525Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-23T12:17:56.999215202Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-23T12:17:57.007642546Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-23T12:17:57.01081916Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-23 17:47:57 service.sh: starting daemons + watchdog
+2026-09-23 17:47:57 service.sh: boot sequence done
+2026-09-24 12:13:32 service.sh: waiting for boot_completed
+2026-09-24 12:13:42 service.sh: waiting for network
+2026-09-24 12:13:42 service.sh: network is up
+2026-09-24 12:13:42 service.sh: wakelock acquired
+{"time":"2026-09-24T06:43:42.595455828Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-24T06:43:42.599376505Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-24T06:43:42.606194578Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-24T06:43:42.609039422Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-24 12:13:42 service.sh: starting daemons + watchdog
+2026-09-24 12:13:42 service.sh: boot sequence done
+2026-09-25 09:41:56 service.sh: waiting for boot_completed
+2026-09-25 09:42:08 service.sh: waiting for network
+2026-09-25 09:42:08 service.sh: network is up
+2026-09-25 09:42:08 service.sh: wakelock acquired
+{"time":"2026-09-25T04:12:08.35705515Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-25T04:12:08.363901921Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-25T04:12:08.37319515Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-25T04:12:08.376764212Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-25 09:42:08 service.sh: starting daemons + watchdog
+2026-09-25 09:42:08 service.sh: boot sequence done
+2026-09-25 14:47:06 watchdog: mediamtx down (attempt 1), restarting
+2026-09-25 14:47:06 watchdog: nvrd down (attempt 1), restarting
+2026-09-25 14:47:07 watchdog: detector down (attempt 1), restarting
+2026-09-25 14:56:33 watchdog: mediamtx down (attempt 1), restarting
+2026-09-25 14:56:33 watchdog: nvrd down (attempt 1), restarting
+2026-09-25 14:56:33 watchdog: detector down (attempt 1), restarting
+2026-09-25 14:57:04 watchdog: mediamtx down (attempt 3), restarting
+2026-09-25 15:56:51 service.sh: waiting for boot_completed
+2026-09-25 15:57:01 service.sh: waiting for network
+2026-09-25 15:57:01 service.sh: network is up
+2026-09-25 15:57:01 service.sh: wakelock acquired
+{"time":"2026-09-25T10:27:01.947276244Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-25T10:27:01.951980983Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-25T10:27:01.958890983Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-25T10:27:01.961595202Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-25 15:57:01 service.sh: starting daemons + watchdog
+2026-09-25 15:57:02 service.sh: boot sequence done
+2026-09-25 15:57:17 watchdog: tunnel down (attempt 1), restarting
+2026-09-29 19:45:49 service.sh: waiting for boot_completed
+2026-09-29 19:46:01 service.sh: waiting for network
+2026-09-29 19:46:01 service.sh: network is up
+2026-09-29 19:46:01 service.sh: wakelock acquired
+{"time":"2026-09-29T14:16:01.455465202Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-29T14:16:01.457448014Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-09-29T14:16:01.468068639Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-29T14:16:01.471530931Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-09-29 19:46:01 service.sh: starting daemons + watchdog
+2026-09-29 19:46:01 service.sh: boot sequence done
+2026-09-29 19:46:00 watchdog: tunnel down (attempt 1), restarting
+2026-10-06 16:36:31 service.sh: waiting for boot_completed
+2026-10-06 16:36:43 service.sh: waiting for network
+2026-10-06 16:36:43 service.sh: network is up
+2026-10-06 16:36:43 service.sh: wakelock acquired
+{"time":"2026-10-06T11:06:43.378688327Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-10-06T11:06:43.385254264Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-10-06T11:06:43.393282441Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-10-06T11:06:43.396246452Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-10-06 16:36:43 service.sh: starting daemons + watchdog
+2026-10-06 16:36:43 service.sh: boot sequence done
+2026-10-06 16:36:35 watchdog: tunnel down (attempt 1), restarting
+2026-10-09 15:45:31 service.sh: waiting for boot_completed
+2026-10-09 15:45:43 service.sh: waiting for network
+2026-10-09 15:45:43 service.sh: network is up
+2026-10-09 15:45:43 service.sh: wakelock acquired
+{"time":"2026-10-09T10:15:43.775779577Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-10-09T10:15:43.781327702Z","level":"INFO","msg":"mediamtx.yml written","path":"/data/nvr/mediamtx.yml"}
+{"time":"2026-10-09T10:15:43.789211191Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-10-09T10:15:43.792528691Z","level":"INFO","msg":"detector.json written","path":"/data/nvr/detector.json"}
+2026-10-09 15:45:43 service.sh: starting daemons + watchdog
+2026-10-09 15:45:43 service.sh: boot sequence done
+2026-10-09 15:45:49 watchdog: tunnel down (attempt 1), restarting

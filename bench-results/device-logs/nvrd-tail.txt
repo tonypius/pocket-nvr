@@ -1,0 +1,300 @@
+{"time":"2026-09-25T14:02:10.171687518Z","level":"INFO","msg":"notification queued","event":5070,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:02:10.173438663Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5070,"score":0.883}
+{"time":"2026-09-25T14:02:10.173645278Z","level":"WARN","msg":"clip extraction failed","event":5070,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:02:17.115686682Z","level":"INFO","msg":"notification queued","event":5071,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:02:17.11615913Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5071,"score":0.835}
+{"time":"2026-09-25T14:02:17.116991786Z","level":"WARN","msg":"clip extraction failed","event":5071,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:02:21.883483503Z","level":"INFO","msg":"notification queued","event":5072,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:02:21.883883034Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5072,"score":0.613}
+{"time":"2026-09-25T14:02:21.884167982Z","level":"WARN","msg":"clip extraction failed","event":5072,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:02:33.214342873Z","level":"INFO","msg":"notification queued","event":5073,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:02:33.214942769Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5073,"score":0.908}
+{"time":"2026-09-25T14:02:33.215852301Z","level":"WARN","msg":"clip extraction failed","event":5073,"err":"no recordings cover 2026-09-25T14:01:09Z..2026-09-25T14:02:43Z"}
+{"time":"2026-09-25T14:03:52.407570864Z","level":"INFO","msg":"notification queued","event":5074,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:03:52.407881802Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5074,"score":0.888}
+{"time":"2026-09-25T14:03:52.408837791Z","level":"WARN","msg":"clip extraction failed","event":5074,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:04:02.686291798Z","level":"INFO","msg":"notification queued","event":5075,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:04:02.686711537Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5075,"score":0.86}
+{"time":"2026-09-25T14:04:02.686924506Z","level":"WARN","msg":"clip extraction failed","event":5075,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:04:09.011165285Z","level":"INFO","msg":"notification queued","event":5076,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:04:09.011594035Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5076,"score":0.639}
+{"time":"2026-09-25T14:04:09.012228931Z","level":"WARN","msg":"clip extraction failed","event":5076,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:04:13.447043616Z","level":"INFO","msg":"notification queued","event":5077,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:04:13.447723877Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5077,"score":0.883}
+{"time":"2026-09-25T14:04:13.449041898Z","level":"WARN","msg":"clip extraction failed","event":5077,"err":"no recordings cover 2026-09-25T14:03:51Z..2026-09-25T14:04:23Z"}
+{"time":"2026-09-25T14:04:23.904724446Z","level":"INFO","msg":"notification queued","event":5078,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:04:23.905347571Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5078,"score":0.855}
+{"time":"2026-09-25T14:04:23.906220696Z","level":"WARN","msg":"clip extraction failed","event":5078,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:04:49.622790582Z","level":"INFO","msg":"notification queued","event":5079,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:04:49.623195686Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5079,"score":0.775}
+{"time":"2026-09-25T14:04:49.623457874Z","level":"WARN","msg":"clip extraction failed","event":5079,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:05:05.666839169Z","level":"INFO","msg":"notification queued","event":5080,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:05:05.667658232Z","level":"WARN","msg":"clip extraction failed","event":5080,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:05:05.668224742Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5080,"score":0.812}
+{"time":"2026-09-25T14:05:09.836158022Z","level":"INFO","msg":"notification queued","event":5081,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:05:09.836872085Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5081,"score":0.704}
+{"time":"2026-09-25T14:05:09.837396147Z","level":"WARN","msg":"clip extraction failed","event":5081,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:05:16.281691197Z","level":"INFO","msg":"notification queued","event":5082,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:05:16.282381145Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5082,"score":0.646}
+{"time":"2026-09-25T14:05:16.282571353Z","level":"WARN","msg":"clip extraction failed","event":5082,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:05:48.117293268Z","level":"INFO","msg":"notification queued","event":5083,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:05:48.117722539Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5083,"score":0.833}
+{"time":"2026-09-25T14:05:48.118014101Z","level":"WARN","msg":"clip extraction failed","event":5083,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:05:55.880976025Z","level":"INFO","msg":"notification queued","event":5084,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:05:55.881393265Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5084,"score":0.757}
+{"time":"2026-09-25T14:05:55.881629984Z","level":"WARN","msg":"clip extraction failed","event":5084,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:06:02.293617898Z","level":"INFO","msg":"notification queued","event":5085,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:06:02.294077585Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5085,"score":0.55}
+{"time":"2026-09-25T14:06:02.294307012Z","level":"WARN","msg":"clip extraction failed","event":5085,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:06:15.259504924Z","level":"INFO","msg":"notification queued","event":5086,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:06:15.260459351Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5086,"score":0.672}
+{"time":"2026-09-25T14:06:15.260863778Z","level":"WARN","msg":"clip extraction failed","event":5086,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:06:35.095847365Z","level":"INFO","msg":"notification queued","event":5087,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:06:35.096173458Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5087,"score":0.837}
+{"time":"2026-09-25T14:06:35.096556375Z","level":"WARN","msg":"clip extraction failed","event":5087,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:06:43.025059445Z","level":"INFO","msg":"notification queued","event":5088,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:06:43.025549028Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5088,"score":0.758}
+{"time":"2026-09-25T14:06:43.026287153Z","level":"WARN","msg":"clip extraction failed","event":5088,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:07:35.956987237Z","level":"INFO","msg":"notification queued","event":5089,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:07:35.957306248Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5089,"score":0.826}
+{"time":"2026-09-25T14:07:35.957541352Z","level":"WARN","msg":"clip extraction failed","event":5089,"err":"no recordings cover 2026-09-25T14:07:28Z..2026-09-25T14:07:45Z"}
+{"time":"2026-09-25T14:07:59.871173009Z","level":"INFO","msg":"notification queued","event":5090,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:07:59.871589468Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5090,"score":0.854}
+{"time":"2026-09-25T14:07:59.871904572Z","level":"WARN","msg":"clip extraction failed","event":5090,"err":"no recordings cover 2026-09-25T14:07:40Z..2026-09-25T14:08:09Z"}
+{"time":"2026-09-25T14:08:10.668394672Z","level":"INFO","msg":"notification queued","event":5091,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:08:10.671985713Z","level":"WARN","msg":"clip extraction failed","event":5091,"err":"no recordings cover 2026-09-25T14:08:02Z..2026-09-25T14:08:20Z"}
+{"time":"2026-09-25T14:08:10.671647172Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5091,"score":0.801}
+{"time":"2026-09-25T14:08:26.737866176Z","level":"INFO","msg":"notification queued","event":5092,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:08:26.738497999Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5092,"score":0.819}
+{"time":"2026-09-25T14:08:26.738789666Z","level":"WARN","msg":"clip extraction failed","event":5092,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:08:41.831114868Z","level":"INFO","msg":"notification queued","event":5093,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:08:41.831579712Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5093,"score":0.797}
+{"time":"2026-09-25T14:08:41.831817785Z","level":"WARN","msg":"clip extraction failed","event":5093,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:09:08.663058296Z","level":"INFO","msg":"notification queued","event":5094,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:09:08.66367741Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5094,"score":0.709}
+{"time":"2026-09-25T14:09:08.664148504Z","level":"WARN","msg":"clip extraction failed","event":5094,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:09:19.147356521Z","level":"INFO","msg":"notification queued","event":5095,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:09:19.147505375Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5095,"score":0.583}
+{"time":"2026-09-25T14:09:19.148682562Z","level":"WARN","msg":"clip extraction failed","event":5095,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:09:50.719121561Z","level":"INFO","msg":"notification queued","event":5096,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:09:50.719789009Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5096,"score":0.687}
+{"time":"2026-09-25T14:09:50.720424946Z","level":"WARN","msg":"clip extraction failed","event":5096,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:10:42.742140603Z","level":"INFO","msg":"notification queued","event":5097,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:10:42.74253852Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5097,"score":0.802}
+{"time":"2026-09-25T14:10:42.742759041Z","level":"WARN","msg":"clip extraction failed","event":5097,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:11:01.510892523Z","level":"INFO","msg":"notification queued","event":5098,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:11:01.511403565Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5098,"score":0.86}
+{"time":"2026-09-25T14:11:01.511890232Z","level":"WARN","msg":"clip extraction failed","event":5098,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:11:13.273680904Z","level":"INFO","msg":"notification queued","event":5099,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:11:13.274175696Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5099,"score":0.839}
+{"time":"2026-09-25T14:11:13.274378404Z","level":"WARN","msg":"clip extraction failed","event":5099,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:11:17.190905486Z","level":"INFO","msg":"notification queued","event":5100,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:11:17.191310694Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5100,"score":0.881}
+{"time":"2026-09-25T14:11:17.191692517Z","level":"WARN","msg":"clip extraction failed","event":5100,"err":"no recordings cover 2026-09-25T14:10:53Z..2026-09-25T14:11:27Z"}
+{"time":"2026-09-25T14:11:18.64870309Z","level":"INFO","msg":"notification queued","event":5101,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:11:18.649252777Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5101,"score":0.687}
+{"time":"2026-09-25T14:11:18.649342152Z","level":"WARN","msg":"clip extraction failed","event":5101,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:11:36.103969854Z","level":"INFO","msg":"notification queued","event":5102,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:11:36.104824437Z","level":"WARN","msg":"clip extraction failed","event":5102,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:11:36.104648916Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5102,"score":0.851}
+{"time":"2026-09-25T14:11:40.784815737Z","level":"INFO","msg":"notification queued","event":5103,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:11:40.78523454Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5103,"score":0.854}
+{"time":"2026-09-25T14:11:40.785533706Z","level":"WARN","msg":"clip extraction failed","event":5103,"err":"no recordings cover 2026-09-25T14:11:27Z..2026-09-25T14:11:50Z"}
+{"time":"2026-09-25T14:13:36.191733818Z","level":"INFO","msg":"notification queued","event":5104,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:13:36.192125537Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5104,"score":0.708}
+{"time":"2026-09-25T14:13:36.19252335Z","level":"WARN","msg":"clip extraction failed","event":5104,"err":"no recordings cover 2026-09-25T14:13:26Z..2026-09-25T14:13:46Z"}
+{"time":"2026-09-25T14:13:41.830524962Z","level":"INFO","msg":"notification queued","event":5105,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:13:41.831185379Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5105,"score":0.668}
+{"time":"2026-09-25T14:13:41.831991785Z","level":"WARN","msg":"clip extraction failed","event":5105,"err":"no recordings cover 2026-09-25T14:13:33Z..2026-09-25T14:13:51Z"}
+{"time":"2026-09-25T14:13:57.80032506Z","level":"INFO","msg":"notification queued","event":5106,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:13:57.800746519Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5106,"score":0.864}
+{"time":"2026-09-25T14:13:57.801643289Z","level":"WARN","msg":"clip extraction failed","event":5106,"err":"no recordings cover 2026-09-25T14:13:50Z..2026-09-25T14:14:07Z"}
+{"time":"2026-09-25T14:14:08.893853441Z","level":"INFO","msg":"notification queued","event":5107,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:14:08.894122973Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5107,"score":0.857}
+{"time":"2026-09-25T14:14:08.894622868Z","level":"WARN","msg":"clip extraction failed","event":5107,"err":"no recordings cover 2026-09-25T14:13:53Z..2026-09-25T14:14:18Z"}
+{"time":"2026-09-25T14:14:13.130876773Z","level":"INFO","msg":"notification queued","event":5108,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:14:13.131319742Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5108,"score":0.872}
+{"time":"2026-09-25T14:14:13.131572554Z","level":"WARN","msg":"clip extraction failed","event":5108,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:14:30.418615256Z","level":"INFO","msg":"notification queued","event":5109,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:14:30.41900885Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5109,"score":0.737}
+{"time":"2026-09-25T14:14:30.4195226Z","level":"WARN","msg":"clip extraction failed","event":5109,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:14:39.025967232Z","level":"INFO","msg":"notification queued","event":5110,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:14:39.026400565Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5110,"score":0.815}
+{"time":"2026-09-25T14:14:39.026670878Z","level":"WARN","msg":"clip extraction failed","event":5110,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:14:55.210807486Z","level":"INFO","msg":"notification queued","event":5111,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:14:55.21126457Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5111,"score":0.771}
+{"time":"2026-09-25T14:14:55.211461288Z","level":"WARN","msg":"clip extraction failed","event":5111,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:15:14.456452479Z","level":"INFO","msg":"notification queued","event":5112,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:15:14.457486958Z","level":"WARN","msg":"clip extraction failed","event":5112,"err":"no recordings cover 2026-09-25T14:14:55Z..2026-09-25T14:15:24Z"}
+{"time":"2026-09-25T14:15:14.457490708Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5112,"score":0.85}
+{"time":"2026-09-25T14:15:27.037113151Z","level":"INFO","msg":"notification queued","event":5113,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:15:27.037513672Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5113,"score":0.908}
+{"time":"2026-09-25T14:15:27.037860182Z","level":"WARN","msg":"clip extraction failed","event":5113,"err":"no recordings cover 2026-09-25T14:15:14Z..2026-09-25T14:15:37Z"}
+{"time":"2026-09-25T14:15:27.71863237Z","level":"INFO","msg":"notification queued","event":5114,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:15:27.718930859Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5114,"score":0.878}
+{"time":"2026-09-25T14:15:27.719077161Z","level":"WARN","msg":"clip extraction failed","event":5114,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:16:38.41420677Z","level":"INFO","msg":"notification queued","event":5115,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:16:38.414830884Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5115,"score":0.818}
+{"time":"2026-09-25T14:16:38.416246561Z","level":"WARN","msg":"clip extraction failed","event":5115,"err":"no recordings cover 2026-09-25T14:16:30Z..2026-09-25T14:16:48Z"}
+{"time":"2026-09-25T14:16:44.830511194Z","level":"INFO","msg":"notification queued","event":5116,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:16:44.831078174Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5116,"score":0.855}
+{"time":"2026-09-25T14:16:44.831392444Z","level":"WARN","msg":"clip extraction failed","event":5116,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:16:53.852073951Z","level":"INFO","msg":"notification queued","event":5117,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:16:53.852370149Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5117,"score":0.869}
+{"time":"2026-09-25T14:16:53.852803691Z","level":"WARN","msg":"clip extraction failed","event":5117,"err":"no recordings cover 2026-09-25T14:16:37Z..2026-09-25T14:17:03Z"}
+{"time":"2026-09-25T14:17:05.900348322Z","level":"INFO","msg":"notification queued","event":5118,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:17:05.900776186Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5118,"score":0.85}
+{"time":"2026-09-25T14:17:05.902072384Z","level":"WARN","msg":"clip extraction failed","event":5118,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:17:26.304820033Z","level":"INFO","msg":"notification queued","event":5119,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:17:26.305147064Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5119,"score":0.785}
+{"time":"2026-09-25T14:17:26.305245033Z","level":"WARN","msg":"clip extraction failed","event":5119,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:17:26.511537012Z","level":"INFO","msg":"notification queued","event":5120,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:17:26.51233571Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5120,"score":0.853}
+{"time":"2026-09-25T14:17:26.51299097Z","level":"WARN","msg":"clip extraction failed","event":5120,"err":"no recordings cover 2026-09-25T14:16:57Z..2026-09-25T14:17:36Z"}
+{"time":"2026-09-25T14:17:33.331079561Z","level":"INFO","msg":"notification queued","event":5121,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:17:33.331510238Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5121,"score":0.783}
+{"time":"2026-09-25T14:17:33.331870811Z","level":"WARN","msg":"clip extraction failed","event":5121,"err":"no recordings cover 2026-09-25T14:17:21Z..2026-09-25T14:17:43Z"}
+{"time":"2026-09-25T14:17:52.23496195Z","level":"INFO","msg":"notification queued","event":5122,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:17:52.235335075Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5122,"score":0.844}
+{"time":"2026-09-25T14:17:52.235546898Z","level":"WARN","msg":"clip extraction failed","event":5122,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:17:53.311719502Z","level":"INFO","msg":"notification queued","event":5123,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:17:53.312068252Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5123,"score":0.89}
+{"time":"2026-09-25T14:17:53.312981741Z","level":"WARN","msg":"clip extraction failed","event":5123,"err":"no recordings cover 2026-09-25T14:17:28Z..2026-09-25T14:18:03Z"}
+{"time":"2026-09-25T14:17:58.467371531Z","level":"INFO","msg":"notification queued","event":5124,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:17:58.467734968Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5124,"score":0.782}
+{"time":"2026-09-25T14:17:58.468746583Z","level":"WARN","msg":"clip extraction failed","event":5124,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:18:15.645981837Z","level":"INFO","msg":"notification queued","event":5125,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:18:15.646610691Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5125,"score":0.896}
+{"time":"2026-09-25T14:18:15.64693241Z","level":"WARN","msg":"clip extraction failed","event":5125,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:19:00.990990986Z","level":"INFO","msg":"notification queued","event":5126,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:19:00.991364215Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5126,"score":0.795}
+{"time":"2026-09-25T14:19:00.991626142Z","level":"WARN","msg":"clip extraction failed","event":5126,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:19:37.00408217Z","level":"INFO","msg":"notification queued","event":5127,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:19:37.004509462Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5127,"score":0.59}
+{"time":"2026-09-25T14:19:37.004846962Z","level":"WARN","msg":"clip extraction failed","event":5127,"err":"no recordings cover 2026-09-25T14:19:28Z..2026-09-25T14:19:46Z"}
+{"time":"2026-09-25T14:19:40.373124513Z","level":"INFO","msg":"notification queued","event":5128,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:19:40.373527013Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5128,"score":0.693}
+{"time":"2026-09-25T14:19:40.373869617Z","level":"WARN","msg":"clip extraction failed","event":5128,"err":"no recordings cover 2026-09-25T14:19:33Z..2026-09-25T14:19:50Z"}
+{"time":"2026-09-25T14:19:48.656377166Z","level":"INFO","msg":"notification queued","event":5129,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:19:48.656694978Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5129,"score":0.786}
+{"time":"2026-09-25T14:19:48.657016437Z","level":"WARN","msg":"clip extraction failed","event":5129,"err":"no recordings cover 2026-09-25T14:19:37Z..2026-09-25T14:19:58Z"}
+{"time":"2026-09-25T14:19:58.376787371Z","level":"INFO","msg":"notification queued","event":5130,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:19:58.377117944Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5130,"score":0.76}
+{"time":"2026-09-25T14:19:58.377373777Z","level":"WARN","msg":"clip extraction failed","event":5130,"err":"no recordings cover 2026-09-25T14:19:47Z..2026-09-25T14:20:08Z"}
+{"time":"2026-09-25T14:20:02.931244608Z","level":"INFO","msg":"notification queued","event":5131,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:20:02.931790702Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5131,"score":0.825}
+{"time":"2026-09-25T14:20:02.932349765Z","level":"WARN","msg":"clip extraction failed","event":5131,"err":"no recordings cover 2026-09-25T14:19:53Z..2026-09-25T14:20:12Z"}
+{"time":"2026-09-25T14:20:09.563948095Z","level":"INFO","msg":"notification queued","event":5132,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:20:09.56454721Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5132,"score":0.673}
+{"time":"2026-09-25T14:20:09.565123668Z","level":"WARN","msg":"clip extraction failed","event":5132,"err":"no recordings cover 2026-09-25T14:20:00Z..2026-09-25T14:20:19Z"}
+{"time":"2026-09-25T14:20:19.291326686Z","level":"INFO","msg":"notification queued","event":5133,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:20:19.2917733Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5133,"score":0.912}
+{"time":"2026-09-25T14:20:19.291965019Z","level":"WARN","msg":"clip extraction failed","event":5133,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:20:36.615598137Z","level":"INFO","msg":"notification queued","event":5134,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:20:36.615965637Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5134,"score":0.87}
+{"time":"2026-09-25T14:20:36.616277616Z","level":"WARN","msg":"clip extraction failed","event":5134,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:21:14.231184737Z","level":"INFO","msg":"notification queued","event":5135,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:21:14.231635987Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5135,"score":0.865}
+{"time":"2026-09-25T14:21:14.231891508Z","level":"WARN","msg":"clip extraction failed","event":5135,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:21:26.933162285Z","level":"INFO","msg":"notification queued","event":5136,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:21:26.933808326Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5136,"score":0.779}
+{"time":"2026-09-25T14:21:26.935048431Z","level":"WARN","msg":"clip extraction failed","event":5136,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:21:57.353888419Z","level":"INFO","msg":"notification queued","event":5137,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:21:57.354340659Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5137,"score":0.893}
+{"time":"2026-09-25T14:21:57.354497638Z","level":"WARN","msg":"clip extraction failed","event":5137,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:22:09.411720133Z","level":"INFO","msg":"notification queued","event":5138,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:22:09.412522633Z","level":"WARN","msg":"clip extraction failed","event":5138,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:22:09.412914248Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5138,"score":0.896}
+{"time":"2026-09-25T14:22:19.512569504Z","level":"INFO","msg":"notification queued","event":5139,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:22:19.512964244Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5139,"score":0.871}
+{"time":"2026-09-25T14:22:19.513275754Z","level":"WARN","msg":"clip extraction failed","event":5139,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:23:05.501845528Z","level":"INFO","msg":"notification queued","event":5140,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:23:05.502258393Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5140,"score":0.877}
+{"time":"2026-09-25T14:23:05.502540424Z","level":"WARN","msg":"clip extraction failed","event":5140,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:23:18.67909495Z","level":"INFO","msg":"notification queued","event":5141,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:23:18.67954969Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5141,"score":0.87}
+{"time":"2026-09-25T14:23:18.679761461Z","level":"WARN","msg":"clip extraction failed","event":5141,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:24:26.218162425Z","level":"INFO","msg":"notification queued","event":5142,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:24:26.218558154Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5142,"score":0.909}
+{"time":"2026-09-25T14:24:26.218826643Z","level":"WARN","msg":"clip extraction failed","event":5142,"err":"no recordings cover 2026-09-25T14:20:10Z..2026-09-25T14:24:36Z"}
+{"time":"2026-09-25T14:24:38.910455336Z","level":"INFO","msg":"notification queued","event":5143,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:24:38.911138461Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5143,"score":0.909}
+{"time":"2026-09-25T14:24:38.91155518Z","level":"WARN","msg":"clip extraction failed","event":5143,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:25:16.150025947Z","level":"INFO","msg":"notification queued","event":5144,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:25:16.15067027Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5144,"score":0.859}
+{"time":"2026-09-25T14:25:16.153772249Z","level":"WARN","msg":"clip extraction failed","event":5144,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:25:22.860842976Z","level":"INFO","msg":"notification queued","event":5145,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:25:22.861205736Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5145,"score":0.917}
+{"time":"2026-09-25T14:25:22.861783861Z","level":"WARN","msg":"clip extraction failed","event":5145,"err":"no recordings cover 2026-09-25T14:24:21Z..2026-09-25T14:25:32Z"}
+{"time":"2026-09-25T14:25:28.898942557Z","level":"INFO","msg":"notification queued","event":5146,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:25:28.899259015Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5146,"score":0.852}
+{"time":"2026-09-25T14:25:28.899501828Z","level":"WARN","msg":"clip extraction failed","event":5146,"err":"no recordings cover 2026-09-25T14:25:17Z..2026-09-25T14:25:38Z"}
+{"time":"2026-09-25T14:25:34.034700472Z","level":"INFO","msg":"notification queued","event":5147,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:25:34.035396357Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5147,"score":0.592}
+{"time":"2026-09-25T14:25:34.035663232Z","level":"WARN","msg":"clip extraction failed","event":5147,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:25:41.085652292Z","level":"INFO","msg":"notification queued","event":5148,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:25:41.08627625Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5148,"score":0.846}
+{"time":"2026-09-25T14:25:41.087181511Z","level":"WARN","msg":"clip extraction failed","event":5148,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:25:54.444418329Z","level":"INFO","msg":"notification queued","event":5149,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:25:54.444884631Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5149,"score":0.85}
+{"time":"2026-09-25T14:25:54.44522187Z","level":"WARN","msg":"clip extraction failed","event":5149,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:26:31.639551856Z","level":"INFO","msg":"notification queued","event":5150,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:26:31.639935658Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5150,"score":0.831}
+{"time":"2026-09-25T14:26:31.640553887Z","level":"WARN","msg":"clip extraction failed","event":5150,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:26:40.862791332Z","level":"INFO","msg":"notification queued","event":5151,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:26:40.8632543Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5151,"score":0.716}
+{"time":"2026-09-25T14:26:40.863496488Z","level":"WARN","msg":"clip extraction failed","event":5151,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:26:41.606416383Z","level":"INFO","msg":"notification queued","event":5152,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:26:41.606831227Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5152,"score":0.881}
+{"time":"2026-09-25T14:26:41.608701488Z","level":"WARN","msg":"clip extraction failed","event":5152,"err":"no recordings cover 2026-09-25T14:25:24Z..2026-09-25T14:26:51Z"}
+{"time":"2026-09-25T14:26:59.166339866Z","level":"INFO","msg":"notification queued","event":5153,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:26:59.166786116Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5153,"score":0.627}
+{"time":"2026-09-25T14:26:59.16766445Z","level":"WARN","msg":"clip extraction failed","event":5153,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:27:21.451783868Z","level":"INFO","msg":"notification queued","event":5154,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:27:21.452621108Z","level":"WARN","msg":"clip extraction failed","event":5154,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:27:21.452400535Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5154,"score":0.77}
+{"time":"2026-09-25T14:27:27.794638032Z","level":"INFO","msg":"notification queued","event":5155,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:27:27.795218605Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5155,"score":0.886}
+{"time":"2026-09-25T14:27:27.795572355Z","level":"WARN","msg":"clip extraction failed","event":5155,"err":"no recordings cover 2026-09-25T14:26:36Z..2026-09-25T14:27:37Z"}
+{"time":"2026-09-25T14:27:59.004144114Z","level":"INFO","msg":"notification queued","event":5156,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:27:59.004469114Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5156,"score":0.82}
+{"time":"2026-09-25T14:27:59.004579166Z","level":"WARN","msg":"clip extraction failed","event":5156,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:28:17.079558222Z","level":"INFO","msg":"notification queued","event":5157,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:28:17.079674524Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5157,"score":0.741}
+{"time":"2026-09-25T14:28:17.080066816Z","level":"WARN","msg":"clip extraction failed","event":5157,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:28:39.336644411Z","level":"INFO","msg":"notification queued","event":5158,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:28:39.337021286Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5158,"score":0.729}
+{"time":"2026-09-25T14:28:39.337249047Z","level":"WARN","msg":"clip extraction failed","event":5158,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:28:52.344589615Z","level":"INFO","msg":"notification queued","event":5159,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:28:52.34491175Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5159,"score":0.897}
+{"time":"2026-09-25T14:28:52.345142584Z","level":"WARN","msg":"clip extraction failed","event":5159,"err":"no recordings cover 2026-09-25T14:27:22Z..2026-09-25T14:29:02Z"}
+{"time":"2026-09-25T14:29:03.264960444Z","level":"INFO","msg":"notification queued","event":5160,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:29:03.265198829Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5160,"score":0.569}
+{"time":"2026-09-25T14:29:03.265303361Z","level":"WARN","msg":"clip extraction failed","event":5160,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:29:13.539626898Z","level":"INFO","msg":"notification queued","event":5161,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:29:13.540256273Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5161,"score":0.662}
+{"time":"2026-09-25T14:29:13.540591325Z","level":"WARN","msg":"clip extraction failed","event":5161,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:29:32.760720693Z","level":"INFO","msg":"notification queued","event":5162,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:29:32.761122308Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5162,"score":0.776}
+{"time":"2026-09-25T14:29:32.761634704Z","level":"WARN","msg":"clip extraction failed","event":5162,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:29:38.847322722Z","level":"INFO","msg":"notification queued","event":5163,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:29:38.847920066Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5163,"score":0.882}
+{"time":"2026-09-25T14:29:38.849513087Z","level":"WARN","msg":"clip extraction failed","event":5163,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T14:29:40.871236107Z","level":"INFO","msg":"notification queued","event":5164,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:29:40.871660325Z","level":"INFO","msg":"event ingested","camera":"front_tapo","id":5164,"score":0.908}
+{"time":"2026-09-25T14:29:40.871971784Z","level":"WARN","msg":"clip extraction failed","event":5164,"err":"no recordings cover 2026-09-25T14:28:47Z..2026-09-25T14:29:50Z"}
+{"time":"2026-09-25T14:30:00.04204912Z","level":"INFO","msg":"notification queued","event":5165,"delivered":false,"reason":"no provider configured"}
+{"time":"2026-09-25T14:30:00.042303183Z","level":"INFO","msg":"event ingested","camera":"back_cpplus","id":5165,"score":0.866}
+{"time":"2026-09-25T14:30:00.042436151Z","level":"WARN","msg":"clip extraction failed","event":5165,"err":"recordings dir: open /data/nvr/recordings/back_cpplus: no such file or directory"}
+{"time":"2026-09-25T22:46:31.716301037Z","level":"INFO","msg":"shutting down","signal":"terminated"}
+{"time":"2026-09-29T14:16:01.534803587Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-09-29T14:16:01.545057337Z","level":"WARN","msg":"no notification provider configured (check secrets + notifications.provider)"}
+{"time":"2026-09-29T14:16:01.549927493Z","level":"INFO","msg":"api listening","addr":"0.0.0.0:8099"}
+{"time":"2026-09-30T20:27:29.975271553Z","level":"INFO","msg":"shutting down","signal":"terminated"}
+{"time":"2026-10-06T11:06:43.454347962Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-10-06T11:06:43.466736556Z","level":"WARN","msg":"no notification provider configured (check secrets + notifications.provider)"}
+{"time":"2026-10-06T11:06:43.475423379Z","level":"INFO","msg":"api listening","addr":"0.0.0.0:8099"}
+{"time":"2026-10-07T16:38:58.855666667Z","level":"INFO","msg":"shutting down","signal":"terminated"}
+{"time":"2026-10-09T10:15:43.85863916Z","level":"INFO","msg":"nvrd starting","version":"0.1.0","config_dir":"/data/nvr"}
+{"time":"2026-10-09T10:15:43.868850045Z","level":"WARN","msg":"no notification provider configured (check secrets + notifications.provider)"}
+{"time":"2026-10-09T10:15:43.878967754Z","level":"INFO","msg":"api listening","addr":"0.0.0.0:8099"}

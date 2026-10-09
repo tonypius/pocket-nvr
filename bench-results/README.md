@@ -7,6 +7,8 @@ here is produced by a script in `scripts/` — no hand-typed numbers.
 |---|---|---|
 | `bench-phone-20261009.txt` | `scripts/bench_publish.sh` (wraps `scripts/bench_phone.sh`) | captured 2026-10-09 |
 | `soak-local-4cam-1h/` | `scripts/soak.sh --duration 1h --cameras 4` | 1 h local run, 2026-10-09 |
+| `soak-phone-sample/` | `scripts/soak.sh --target phone` (read-only) | 10 min production sample, 2026-10-09 |
+| `device-logs/` | pulled from `/data/nvr/logs/` + scrubbed | 2026-09-08 → 2026-10-09 |
 
 ## PII policy
 
@@ -77,3 +79,37 @@ The run also caught a real bug — see `soak-local-4cam-1h/NOTES.md`:
 a cold-started nvrdet ran with healthy gauges but emitted zero events
 for ~17 minutes until restarted. Reproducible boot-order issue
 candidate; open follow-up.
+
+## Production evidence — the appliance that survives neglect
+
+### Device logs (`device-logs/`, 2026-09-08 → 2026-10-09, 31 days)
+
+Scrubbed excerpts of the real phone's supervisor/watchdog logs and
+operational log tails (RTSP reconnect noise included — that's what an
+unattended appliance actually lives through).
+
+- **19 boots**, every one self-recovered by the Magisk `service.sh`:
+  wait for `boot_completed` → wait for network → wakelock → regenerate
+  runtime configs → start daemons → watchdog. Full sequence visible in
+  `supervisor.txt`; today's (2026-10-09 15:45) went boot→stack-up in
+  under 30 s.
+- **71 watchdog restarts** total: nvrd 29, detector 22, mediamtx 16,
+  cloudflared 4 — heavily clustered in the 2026-09-08/09 bring-up days
+  (8 of the 19 boots); after 2026-09-09 the system settles to roughly
+  one boot per week with automatic recovery each time.
+- Boot #1 of this log (2026-09-08 18:51) is the stack's first boot
+  after initial deployment.
+
+### Phone soak sample (`soak-phone-sample/`, 10 min, read-only)
+
+`scripts/soak.sh --target phone` samples the live production stack
+over `adb forward` without touching it. Captured 2026-10-09 evening:
+
+- SoC temperature **34.3–35.1 °C** (thermal governor at full fps scale)
+- nvrdet RSS **57 MB, +0.0% drift**; nvrd 16 MB, mediamtx 40 MB
+- nvrd uptime 8,016 s at sample start; 4,901 lifetime events
+- Quiet scene the whole window: motion gate blocked everything, so
+  inference_ms reads 0 (no frames inferred) — honest idle behavior,
+  and a good baseline contrast for the local soak's loaded numbers.
+- Caveat: `summary.txt`'s `kernel=` field records the sampling host
+  (the Mac), not the device; the temps above are the phone's SoC.

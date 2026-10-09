@@ -1,0 +1,8 @@
+PocketNVR soak summary — target=phone cameras=4 duration=600s sample=30s
+git=53d6377 kernel=Darwin 24.6.0 arm64 restarts(kill-test)=0 samples=20
+events_total: first=4901.0 last=4901.0
+inference_ms: p50=0.0 p95=0.0 max=0.0
+queue_depth max=0 dropped_frames total=0 fps_scale min=1
+temp_c: min=34.3 max=35.1
+rss_nvrdet_kb: first=57216 last=57216 max=58628 drift=+0.0%
+VERDICT: PASS (events>0, samples>=80% expected, |rss drift|<=20%)

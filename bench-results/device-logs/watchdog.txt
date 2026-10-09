@@ -1,0 +1,88 @@
+usage: nvrctl start|stop|restart|status|logs [component] [n]
+usage: nvrctl start|stop|restart|status|logs [component] [n]
+nvrd started (pid 3364)
+nvrd started (pid 3497)
+nvrd started (pid 4859)
+mediamtx started (pid 5517)
+detector started (pid 5540)
+mediamtx started (pid 6505)
+nvrd started (pid 6521)
+detector started (pid 6536)
+mediamtx started (pid 11113)
+nvrd started (pid 11129)
+detector started (pid 11148)
+Terminated 
+Terminated 
+mediamtx started (pid 12583)
+nvrd started (pid 12599)
+detector started (pid 12616)
+detector started (pid 12861)
+mediamtx started (pid 13636)
+nvrd started (pid 13655)
+detector started (pid 13671)
+mediamtx started (pid 14098)
+nvrd started (pid 14115)
+detector started (pid 14131)
+Terminated 
+mediamtx started (pid 4247)
+nvrd started (pid 4270)
+detector started (pid 4286)
+mediamtx started (pid 4794)
+nvrd started (pid 4815)
+detector started (pid 4915)
+nvrd started (pid 5059)
+nvrd started (pid 5480)
+Terminated 
+mediamtx started (pid 4188)
+detector started (pid 4210)
+mediamtx started (pid 5300)
+detector started (pid 5322)
+nvrd started (pid 6158)
+mediamtx started (pid 6260)
+detector started (pid 6281)
+detector started (pid 8420)
+detector started (pid 15415)
+nvrd started (pid 19865)
+nvrd started (pid 26028)
+detector started (pid 9608)
+detector started (pid 23535)
+detector started (pid 23857)
+nvrd started (pid 3377)
+detector started (pid 3393)
+nvrd started (pid 12055)
+nvrd started (pid 12482)
+nvrd started (pid 14187)
+nvrd started (pid 22728)
+mediamtx started (pid 30262)
+detector started (pid 30285)
+nvrd started (pid 31899)
+nvrd started (pid 10619)
+nvrd started (pid 19115)
+nvrd started (pid 27832)
+nvrd started (pid 6663)
+nvrd started (pid 12870)
+mediamtx started (pid 13065)
+detector started (pid 13086)
+nvrd started (pid 15496)
+Terminated 
+Terminated 
+Terminated 
+Terminated 
+Terminated 
+Terminated 
+Terminated 
+mediamtx started (pid 25639)
+nvrd started (pid 25659)
+detector started (pid 25675)
+mediamtx started (pid 28024)
+nvrd started (pid 28032)
+detector started (pid 28051)
+mediamtx started (pid 28296)
+Terminated 
+tunnel started (pid 4009)
+Terminated 
+tunnel started (pid 3966)
+Terminated 
+tunnel started (pid 3796)
+Terminated 
+tunnel started (pid 4537)
