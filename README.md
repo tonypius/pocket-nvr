@@ -247,7 +247,13 @@ All routes require the token (except the static app shell). Highlights:
 
 ## Performance
 
-Measured on the test device (mid-range 2019-era SoC, YOLO11n at 640×360, steady-state median of 60 runs): **CPU fp16 ≈ 89 ms/frame** vs **Vulkan (Adreno GPU) ≈ 370 ms/frame** — NCNN's ARM CPU kernels beat the mobile Vulkan path ~4× on this class of hardware, so `backend: cpu` is the default. Vulkan stays one config flip away; INT8 or a smaller `input_size` may shift the balance (`scripts/bench_phone.sh` re-measures in one command). A thermal governor halves or pauses the analysis fps as the SoC approaches its temperature ceiling and ramps back down afterward.
+Measured on a OnePlus 7 (SD855 / Adreno 640, Android 16), YOLO11n at 640×640, steady-state median of 60 runs: **CPU fp16 ≈ 88 ms/frame** vs **Vulkan (Adreno GPU) ≈ 343 ms/frame**. NCNN's ARM CPU kernels beat the mobile Vulkan path by about 3.9× on this class of hardware, so `backend: cpu` is the default. Vulkan stays one config flip away; INT8 or a smaller `input_size` may shift the balance. A thermal governor halves or pauses the analysis fps as the SoC approaches its temperature ceiling and ramps back down afterward.
+
+Re-measure on your own phone in one command with `scripts/bench_phone.sh`. The raw results, methodology, soak tests and 31 days of real device logs are in [`bench-results/`](bench-results/README.md).
+
+## Known issues
+
+- **Detector can emit no events with 4+ cameras.** In a local soak test with 4 synthetic cameras, a cold-started `nvrdet` ran with healthy gauges but emitted zero events for about 17 minutes, until it was restarted with debug logging on. The suspected cause is that the "silence" path that closes open events only runs when the frame queue goes idle for 200 ms, and four interleaved cameras rarely leave it idle. The mechanism is not yet confirmed and it hasn't been reproduced on a phone, where the live deployment has recorded thousands of events. If events stop appearing on a multi-camera setup, restart the detector (`adb shell su -c '/data/nvr/bin/nvrctl restart detector'`). Details and follow-ups: [`bench-results/soak-local-4cam-1h/NOTES.md`](bench-results/soak-local-4cam-1h/NOTES.md).
 
 ## Operations
 
@@ -278,7 +284,12 @@ go test ./...                     # unit tests across all Go packages
 scripts/smoke_local.sh            # config validation → mediamtx.yml → MediaMTX boots
 scripts/build_arm64.sh --docker   # validate the exact phone artifact in an arm64 container
 scripts/e2e_detector.sh           # full pipeline test: synthetic RTSP camera → detection → event → snapshot served
+scripts/soak.sh --duration 1h --cameras 4   # long-run stability test with synthetic cameras
+scripts/soak.sh --target phone    # read-only sampling of the deployed phone (memory, temps, events)
+scripts/bench_publish.sh          # capture the on-phone GPU-vs-CPU benchmark, scrubbed of personal data
 ```
+
+`soak.sh` samples metrics and memory every 30 s and passes if events keep arriving and memory drift stays within 20%. Its local mode also kills the detector mid-run to check recovery, and never sends notifications off-machine. Results are written to `bench-results/` after `scripts/scrub_for_publish.py` removes LAN IPs, tokens, MACs, adb serials and notification topics.
 
 The detector is plain C++17 (CMake): Mac/desktop builds for development, an NDK (bionic) build for the device. The e2e script publishes a looping synthetic camera over RTSP and asserts that events land in the store with valid JPEG assets.
 
