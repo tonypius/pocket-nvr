@@ -71,3 +71,8 @@ queue, event flow, daemon-kill recovery); it is **not** a thermal or
 endurance claim about the phone. The phone-side soak (production stack,
 real SoC temps) runs with `scripts/soak.sh --target phone` and is the
 dataset the 72 h DoD claim will cite.
+
+The run also caught a real bug — see `soak-local-4cam-1h/NOTES.md`:
+a cold-started nvrdet ran with healthy gauges but emitted zero events
+for ~17 minutes until restarted. Reproducible boot-order issue
+candidate; open follow-up.
