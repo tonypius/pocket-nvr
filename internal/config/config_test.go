@@ -178,3 +178,28 @@ func TestOnvifURLRejectsBadScheme(t *testing.T) {
 		}
 	}
 }
+
+func TestOnvifURLEscapesSecretCreds(t *testing.T) {
+	const secrets = "u: bob\np: s3/c@r#et?x\n"
+	dir := writeFiles(t, onvifCfg("    onvif_url: http://${secret:u}:${secret:p}@10.0.0.5:2020/onvif/device_service\n"), secrets)
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	want := "http://bob:s3%2Fc%40r%23et%3Fx@10.0.0.5:2020/onvif/device_service"
+	if got := cfg.Cameras[0].OnvifURL; got != want {
+		t.Errorf("OnvifURL = %q, want %q", got, want)
+	}
+
+	// Invalid scheme using the same secret: error must not leak the password.
+	dir = writeFiles(t, onvifCfg("    onvif_url: rtsp://${secret:u}:${secret:p}@10.0.0.5/x\n"), secrets)
+	_, err = Load(dir)
+	if err == nil || !strings.Contains(err.Error(), "onvif_url") {
+		t.Fatalf("want onvif_url error, got %v", err)
+	}
+	for _, leak := range []string{"s3/c@r#et?x", "s3%2Fc%40r%23et%3Fx", "c@r"} {
+		if strings.Contains(err.Error(), leak) {
+			t.Errorf("error leaks password fragment %q: %v", leak, err)
+		}
+	}
+}

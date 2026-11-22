@@ -239,6 +239,7 @@ func LoadEx(dir string) (*Config, map[string]string, error) {
 		c.SourceSub = escapeURLCreds(c.SourceSub)
 		c.MainURL = escapeURLCreds(c.MainURL)
 		c.SubURL = escapeURLCreds(c.SubURL)
+		c.OnvifURL = escapeURLCreds(c.OnvifURL)
 	}
 
 	cfg.applyDefaults()
