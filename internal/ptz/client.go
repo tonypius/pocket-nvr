@@ -111,20 +111,35 @@ func Dial(ctx context.Context, t Target, hc *http.Client) (*Client, error) {
 		return nil, errors.New("ptz: no ONVIF endpoints to try")
 	}
 	var errs []error
-	for _, ep := range t.Endpoints {
+	for i, ep := range t.Endpoints {
 		if err := ctx.Err(); err != nil {
 			errs = append(errs, err)
 			break
 		}
 		sc := newSoap(ep, t.User, t.Pass, hc)
 		var caps capabilitiesResp
-		if err := sc.call(ctx, ep, `<tds:GetCapabilities xmlns:tds="`+nsDevice+`"><tds:Category>All</tds:Category></tds:GetCapabilities>`, &caps); err != nil {
+		err := probeEndpoint(ctx, sc, ep, len(t.Endpoints)-i, &caps)
+		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", ep, err))
 			continue
 		}
 		return finishDial(ctx, sc, ep, caps)
 	}
 	return nil, fmt.Errorf("ptz: no ONVIF endpoint answered: %w", errors.Join(errs...))
+}
+
+// probeEndpoint sends GetCapabilities to ep. Each endpoint gets its own
+// sub-deadline, an equal share of the time ctx has left among the remaining
+// endpoints (left counts ep itself), so a filtered port that swallows the
+// request cannot starve the endpoints still to be tried. Without a deadline on
+// ctx none is added.
+func probeEndpoint(ctx context.Context, sc *soapClient, ep string, left int, caps *capabilitiesResp) error {
+	if dl, ok := ctx.Deadline(); ok && left > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Until(dl)/time.Duration(left))
+		defer cancel()
+	}
+	return sc.call(ctx, ep, `<tds:GetCapabilities xmlns:tds="`+nsDevice+`"><tds:Category>All</tds:Category></tds:GetCapabilities>`, caps)
 }
 
 // finishDial runs after an endpoint answered: it resolves the media and PTZ

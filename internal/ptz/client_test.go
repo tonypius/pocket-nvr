@@ -2,6 +2,8 @@ package ptz
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -211,5 +213,43 @@ func TestParseDirection(t *testing.T) {
 	}
 	if _, ok := ParseDirection(""); ok {
 		t.Error("ParseDirection(\"\") should fail")
+	}
+}
+
+// silentListener accepts TCP connections and never replies, like a filtered
+// port whose peer swallows the request.
+func silentListener(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { l.Close() })
+	return "http://" + l.Addr().String() + "/onvif/device_service"
+}
+
+func TestDialSilentEndpointDoesNotStarveNextOne(t *testing.T) {
+	cam := newCam(t, ptztest.Options{PanTilt: true, Zoom: true})
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	defer cancel()
+	c, err := Dial(ctx, Target{Endpoints: []string{silentListener(t), cam.URL}, User: "u", Pass: "p"}, nil)
+	if err != nil {
+		t.Fatalf("Dial: %v (the first endpoint ate the whole budget)", err)
+	}
+	if got := c.Capabilities(); got != (Caps{PanTilt: true, Zoom: true}) {
+		t.Errorf("Capabilities = %+v", got)
+	}
+}
+
+func TestDialWithExpiredContextReturnsPromptly(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	start := time.Now()
+	_, err := Dial(ctx, Target{Endpoints: []string{silentListener(t), silentListener(t)}, User: "u", Pass: "p"}, nil)
+	if err == nil || !errors.Is(err, context.Canceled) {
+		t.Errorf("Dial err = %v, want context.Canceled", err)
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("Dial took %v with a done context", d)
 	}
 }
