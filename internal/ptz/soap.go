@@ -26,6 +26,9 @@ const (
 
 	wsseTimeLayout  = "2006-01-02T15:04:05Z"
 	maxResponseSize = 4 << 20
+
+	defaultHTTPTimeout = 10 * time.Second
+	clockSyncTimeout   = 5 * time.Second
 )
 
 // Fault is a SOAP Fault returned by the device.
@@ -73,13 +76,15 @@ type soapClient struct {
 	mu     sync.Mutex    // guards offset
 	offset time.Duration // device UTC minus local clock
 
-	syncMu    sync.Mutex // serialises the lazy first sync
-	syncTried bool
+	syncMu sync.Mutex
+	syncCh chan struct{} // nil until the lazy sync starts; closed when it finishes
 }
 
 func newSoap(deviceURL, user, pass string, hc *http.Client) *soapClient {
 	if hc == nil {
-		hc = http.DefaultClient
+		// Never fall back to http.DefaultClient: it has no timeout, so a
+		// camera that accepts a connection but never replies would hang us.
+		hc = &http.Client{Timeout: defaultHTTPTimeout}
 	}
 	return &soapClient{deviceURL: deviceURL, user: user, pass: pass, hc: hc}
 }
@@ -115,15 +120,32 @@ func (s *soapClient) syncClock(ctx context.Context) error {
 	return nil
 }
 
-// ensureSynced syncs the clock at most once; failure leaves offset at 0.
-func (s *soapClient) ensureSynced(ctx context.Context) {
+// ensureSynced makes sure the one-time clock sync has finished, starting it
+// if this is the first caller. The sync runs in its own goroutine under a
+// bounded context detached from any caller's cancellation, so a first caller
+// with a short deadline cannot poison it; every caller waits on its own ctx.
+// A failed sync is not fatal (offset stays 0) and is not retried.
+func (s *soapClient) ensureSynced(ctx context.Context) error {
 	s.syncMu.Lock()
-	defer s.syncMu.Unlock()
-	if s.syncTried {
-		return
+	if s.syncCh == nil {
+		ch := make(chan struct{})
+		s.syncCh = ch
+		sctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), clockSyncTimeout)
+		go func() {
+			defer close(ch)
+			defer cancel()
+			_ = s.syncClock(sctx) // best effort: devices that lack it are still usable
+		}()
 	}
-	s.syncTried = true
-	_ = s.syncClock(ctx) // best effort: devices that lack it are still usable
+	ch := s.syncCh
+	s.syncMu.Unlock()
+
+	select {
+	case <-ch:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("soap: waiting for clock sync: %w", ctx.Err())
+	}
 }
 
 // call POSTs bodyXML (the full child element(s) of <Body>) to url with a
@@ -133,7 +155,9 @@ func (s *soapClient) ensureSynced(ctx context.Context) {
 // prefixes do not matter. SOAP Faults are returned as *Fault.
 func (s *soapClient) call(ctx context.Context, url, bodyXML string, out any) error {
 	if s.user != "" {
-		s.ensureSynced(ctx)
+		if err := s.ensureSynced(ctx); err != nil {
+			return err
+		}
 	}
 	return s.do(ctx, url, bodyXML, out, s.user != "")
 }

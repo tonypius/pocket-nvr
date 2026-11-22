@@ -164,3 +164,67 @@ func TestSyncFailureIsNotFatal(t *testing.T) {
 		t.Fatalf("out=%+v offset=%v", out, s.offset)
 	}
 }
+
+func TestShortDeadlineFirstCallDoesNotBurnClockSync(t *testing.T) {
+	cam := ptztest.New(t, ptztest.Options{
+		User: "u", Pass: "p", ClockSkew: 2 * time.Hour,
+		Delay: map[string]time.Duration{"GetSystemDateAndTime": 300 * time.Millisecond},
+	})
+	s := newSoap(cam.URL, "u", "p", http.DefaultClient)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	err := s.call(ctx, cam.URL, getDeviceInfoBody, nil)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("first call err = %v, want deadline exceeded", err)
+	}
+
+	// The detached sync finishes in the background; a later call must succeed.
+	if err := s.call(context.Background(), cam.URL, getDeviceInfoBody, nil); err != nil {
+		t.Fatalf("second call after short-deadline first call: %v", err)
+	}
+	if d := s.offset - 2*time.Hour; d < -2*time.Second || d > 2*time.Second {
+		t.Fatalf("offset = %v, want ~2h", s.offset)
+	}
+}
+
+func TestWaiterHonorsOwnContextWhileSyncHangs(t *testing.T) {
+	cam := ptztest.New(t, ptztest.Options{
+		User: "u", Pass: "p",
+		Delay: map[string]time.Duration{"GetSystemDateAndTime": time.Minute},
+	})
+	s := newSoap(cam.URL, "u", "p", http.DefaultClient)
+
+	// Caller A starts the (hanging) sync and waits on a long context.
+	ctxA, cancelA := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancelA()
+	doneA := make(chan error, 1)
+	go func() { doneA <- s.call(ctxA, cam.URL, getDeviceInfoBody, nil) }()
+	for i := 0; i < 200 && cam.Requests() == 0; i++ {
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	// Caller B has a short deadline and must not block behind the sync.
+	ctxB, cancelB := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancelB()
+	start := time.Now()
+	err := s.call(ctxB, cam.URL, getDeviceInfoBody, nil)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("waiter err = %v, want deadline exceeded", err)
+	}
+	if el := time.Since(start); el > time.Second {
+		t.Fatalf("waiter took %v, want ~100ms", el)
+	}
+
+	cancelA()
+	if err := <-doneA; !errors.Is(err, context.Canceled) {
+		t.Fatalf("caller A err = %v, want canceled", err)
+	}
+}
+
+func TestNilHTTPClientHasTimeout(t *testing.T) {
+	s := newSoap("http://127.0.0.1:1/", "u", "p", nil)
+	if s.hc == nil || s.hc == http.DefaultClient || s.hc.Timeout <= 0 {
+		t.Fatalf("nil hc must default to a client with a timeout, got %+v", s.hc)
+	}
+}

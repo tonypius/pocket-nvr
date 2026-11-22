@@ -21,6 +21,10 @@ type Options struct {
 	User, Pass string
 	// ClockSkew is added to the real clock to produce the camera's clock.
 	ClockSkew time.Duration
+	// Delay holds the response to the named operations (SOAP local name,
+	// e.g. "GetSystemDateAndTime") for the given duration, or until the
+	// client disconnects or the camera is closed.
+	Delay map[string]time.Duration
 }
 
 // Camera is a running fake ONVIF camera.
@@ -30,6 +34,7 @@ type Camera struct {
 
 	opts Options
 	srv  *httptest.Server
+	done chan struct{} // closed on shutdown to release delayed handlers
 	reqs atomic.Int64
 	ops  map[string]operation
 }
@@ -55,10 +60,13 @@ type fault struct{ subcode, reason string }
 // New starts a fake camera that is shut down with t.
 func New(t testing.TB, o Options) *Camera {
 	t.Helper()
-	c := &Camera{opts: o, ops: map[string]operation{}}
+	c := &Camera{opts: o, ops: map[string]operation{}, done: make(chan struct{})}
 	c.registerOps()
 	c.srv = httptest.NewServer(http.HandlerFunc(c.serve))
-	t.Cleanup(c.srv.Close)
+	t.Cleanup(func() {
+		close(c.done)
+		c.srv.Close()
+	})
 	c.URL = c.srv.URL + "/onvif/device_service"
 	return c
 }
@@ -109,6 +117,15 @@ func (c *Camera) serve(w http.ResponseWriter, r *http.Request) {
 	if err := xml.Unmarshal(raw, &env); err != nil || env.Body.Op.XMLName.Local == "" {
 		writeFault(w, &fault{"ter:InvalidArgs", "malformed SOAP request"})
 		return
+	}
+	if d := c.opts.Delay[env.Body.Op.XMLName.Local]; d > 0 {
+		select {
+		case <-time.After(d):
+		case <-r.Context().Done():
+			return
+		case <-c.done:
+			return
+		}
 	}
 	op, ok := c.ops[env.Body.Op.XMLName.Local]
 	if !ok {
