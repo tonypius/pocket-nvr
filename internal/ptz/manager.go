@@ -60,6 +60,11 @@ type Manager struct {
 
 	mu      sync.Mutex
 	entries map[string]*entry
+	// locks holds each camera id's command lock for the lifetime of the
+	// Manager. It deliberately survives Reset and Target changes: a retired
+	// entry's last Stop and its replacement's first Move must still exclude
+	// each other, so every entry of one camera id shares one lock.
+	locks map[string]chan struct{}
 }
 
 // NewManager returns a Manager with production timeouts. A nil logger
@@ -79,6 +84,7 @@ func NewManager(logger *slog.Logger) *Manager {
 		failureTTL:     defaultFailureTTL,
 		stopRetryDelay: defaultStopRetryDelay,
 		entries:        map[string]*entry{},
+		locks:          map[string]chan struct{}{},
 	}
 }
 
@@ -87,8 +93,9 @@ func NewManager(logger *slog.Logger) *Manager {
 type entry struct {
 	id     string
 	target Target
-	// cmd is a one-slot semaphore serialising commands to this camera; unlike
-	// a sync.Mutex it can be waited on with a context.
+	// cmd is the camera's one-slot command semaphore, shared by every entry of
+	// this camera id (see Manager.locks); unlike a sync.Mutex it can be waited
+	// on with a context.
 	cmd chan struct{}
 
 	ctx    context.Context // cancelled when the entry is retired; parents probes
@@ -161,7 +168,12 @@ func (m *Manager) entryFor(cam config.Camera) (*entry, error) {
 		return old, nil
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	e := &entry{id: cam.ID, target: t, cmd: make(chan struct{}, 1), ctx: ctx, cancel: cancel}
+	lock := m.locks[cam.ID]
+	if lock == nil {
+		lock = make(chan struct{}, 1)
+		m.locks[cam.ID] = lock
+	}
+	e := &entry{id: cam.ID, target: t, cmd: lock, ctx: ctx, cancel: cancel}
 	m.entries[cam.ID] = e
 	m.mu.Unlock()
 	if old != nil {

@@ -82,22 +82,35 @@ func TestSafetyStopAfterMove(t *testing.T) {
 
 func TestRepeatedMoveKeepsMovingThenStops(t *testing.T) {
 	fake := ptzFake(t)
-	m := newManager(t, 600*time.Millisecond)
+	const maxMove = 300 * time.Millisecond
+	m := newManager(t, maxMove)
 	cam := camFor(fake)
+	// Three Moves 200 ms apart: the whole hold (400 ms) outlasts maxMove, so
+	// only a re-arm on every Move keeps the camera from being stopped midway.
+	var first time.Time
 	for i := 0; i < 3; i++ {
 		if err := m.Move(context.Background(), cam, Right); err != nil {
 			t.Fatalf("Move %d: %v", i, err)
 		}
+		if i == 0 {
+			first = time.Now()
+		}
 		if i < 2 {
-			time.Sleep(80 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
 		}
 	}
-	// 160 ms since the first Move, 80 ms since the last: well under maxMove.
+	last := time.Now()
+	// Now at ~first+400ms: after first+maxMove, before last+maxMove (~100 ms
+	// from the first deadline having passed, ~300 ms before the last one).
 	if got := fake.Stops(); got != 0 {
-		t.Fatalf("Stops = %d while still being held, want 0", got)
+		t.Fatalf("Stops = %d at %v after the first Move (maxMove %v) while still held, want 0: a Move did not re-arm the timer",
+			got, last.Sub(first).Round(time.Millisecond), maxMove)
 	}
 	eventually(t, "safety stop after the last Move", func() bool { return fake.Stops() >= 1 })
-	time.Sleep(1200 * time.Millisecond)
+	if d := time.Since(last); d < maxMove-50*time.Millisecond {
+		t.Errorf("stop arrived %v after the last Move, want about maxMove (%v)", d, maxMove)
+	}
+	time.Sleep(900 * time.Millisecond)
 	if got := fake.Stops(); got != 1 {
 		t.Errorf("Stops = %d, want exactly 1", got)
 	}
@@ -574,4 +587,45 @@ func TestFailedUserStopIsRetried(t *testing.T) {
 	// The user-visible Stop failed after cancelling the safety timer; the
 	// manager must not leave the camera moving.
 	eventually(t, "retried Stop", func() bool { return fake.Stops() >= 1 })
+}
+
+// A command on a retired entry and one on its replacement are for the same
+// camera and must not overlap, and the retired entry's stale Stop must not land
+// after the fresh Move. Deterministic: the slow ContinuousMove keeps the old
+// command in flight while the new Move is issued.
+func TestCommandsSerialisedAcrossReset(t *testing.T) {
+	fake := newCam(t, ptztest.Options{PanTilt: true, Zoom: true, Delay: map[string]time.Duration{"ContinuousMove": 400 * time.Millisecond}})
+	m := newManager(t, 5*time.Second)
+	cam := camFor(fake)
+	if _, err := m.Caps(context.Background(), cam); err != nil {
+		t.Fatal(err)
+	}
+	probeReqs := fake.Requests()
+
+	move1 := make(chan error, 1)
+	go func() { move1 <- m.Move(context.Background(), cam, Left) }()
+	eventually(t, "first ContinuousMove to reach the camera", func() bool { return fake.Requests() > probeReqs })
+
+	m.Reset() // retires the entry whose Move is still in flight
+	if err := m.Move(context.Background(), cam, Right); err != nil {
+		t.Fatalf("Move after Reset: %v", err)
+	}
+	if err := <-move1; err != nil {
+		t.Fatalf("first Move: %v", err)
+	}
+	if got := fake.MaxConcurrent(); got != 1 {
+		t.Errorf("MaxConcurrent = %d across Reset, want 1", got)
+	}
+	mv := fake.Moves()
+	if len(mv) != 2 || mv[0].Pan >= 0 || mv[1].Pan <= 0 {
+		t.Fatalf("Moves = %+v, want left then right", mv)
+	}
+	// The fresh Move has been accepted. The only Stop allowed is the old
+	// entry's, which was sent before it (the lock ordered it first); nothing
+	// may stop the camera afterwards (safety timer is 5 s away).
+	stopsAtAccept := fake.Stops()
+	time.Sleep(500 * time.Millisecond)
+	if got := fake.Stops(); got != stopsAtAccept || got != 1 {
+		t.Errorf("Stops = %d (was %d when the fresh Move was accepted), want 1 and unchanged", got, stopsAtAccept)
+	}
 }
