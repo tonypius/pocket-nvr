@@ -28,6 +28,7 @@ import (
 	"pocketnvr/internal/config"
 	"pocketnvr/internal/discover"
 	"pocketnvr/internal/mediamtx"
+	"pocketnvr/internal/ptz"
 	"pocketnvr/internal/store"
 )
 
@@ -57,6 +58,8 @@ type Server struct {
 	// SSE live event push (B3)
 	sseMu      sync.Mutex
 	sseClients []chan []byte
+	// ONVIF PTZ control; Reset on config reload.
+	ptz *ptz.Manager
 }
 
 // SetMtxProbe registers the MediaMTX liveness probe used by /api/health.
@@ -76,7 +79,7 @@ func (s *Server) SetStorageDegraded(v bool) { s.storageDegraded.Store(v) }
 func FreeDiskBytes(path string) (uint64, bool) { return freeDiskBytes(path) }
 
 func New(cfg *config.Config, redactor *config.Redactor, token string, st *store.Store, logger *slog.Logger, uiDir string) *Server {
-	s := &Server{store: st, start: time.Now(), logger: logger, uiDir: uiDir}
+	s := &Server{store: st, start: time.Now(), logger: logger, uiDir: uiDir, ptz: ptz.NewManager(logger)}
 	s.cfg.Store(cfg)
 	s.redact.Store(redactor)
 	s.token.Store(&token)
@@ -87,6 +90,7 @@ func New(cfg *config.Config, redactor *config.Redactor, token string, st *store.
 func (s *Server) SwapConfig(cfg *config.Config, redactor *config.Redactor) {
 	s.cfg.Store(cfg)
 	s.redact.Store(redactor)
+	s.ptz.Reset()
 }
 
 // SetEventHandler registers the post-store callback for detector events.
@@ -107,6 +111,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/discover", s.handleDiscover)
 	mux.HandleFunc("GET /api/events/stream", s.handleEventsStream)
 	mux.HandleFunc("GET /api/cameras", s.handleCameras)
+	mux.HandleFunc("GET /api/cameras/{id}/ptz", s.handlePTZCaps)
+	mux.HandleFunc("POST /api/cameras/{id}/ptz/move", s.handlePTZMove)
+	mux.HandleFunc("POST /api/cameras/{id}/ptz/stop", s.handlePTZStop)
 	mux.HandleFunc("GET /api/events", s.handleEvents)
 	mux.HandleFunc("GET /api/events/{id}", s.handleEvent)
 	mux.HandleFunc("GET /api/events/{id}/snapshot", s.eventAsset("snapshot_path"))
@@ -341,6 +348,7 @@ func (s *Server) handleCameras(w http.ResponseWriter, r *http.Request) {
 		} `json:"streams"`
 		Live   live      `json:"live"`
 		Detect cfgDetect `json:"detect"`
+		PTZ    *ptz.Caps `json:"ptz,omitempty"` // only when known (cached) and capable
 	}
 	// live endpoints are addressed via the requesting host (LAN/Tailscale)
 	scheme := "http"
@@ -364,6 +372,9 @@ func (s *Server) handleCameras(w http.ResponseWriter, r *http.Request) {
 		o.Live.HLS = hlsBase + "/" + c.ID + "/index.m3u8"
 		o.Live.HLSProxy = "/api/live/hls/" + c.ID + "/index.m3u8"
 		o.Detect = cfgDetect{FPS: c.Detect.FPS, Threshold: c.Detect.Threshold, Zones: zones}
+		if pc, ok := s.ptz.CapsCached(c); ok && (pc.PanTilt || pc.Zoom) {
+			o.PTZ = &pc
+		}
 		res = append(res, o)
 	}
 	writeJSON(w, http.StatusOK, res)

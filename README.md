@@ -238,6 +238,8 @@ All routes require the token (except the static app shell). Highlights:
 | `GET/PUT /api/config`, `POST /api/secrets` | Validated config + write-only secrets management |
 | `POST /api/discover` | ONVIF WS-Discovery + RTSP sweep of the local subnet |
 | `GET /api/cameras` | Camera roster with live-playback endpoints |
+| `GET /api/cameras/{id}/ptz` | ONVIF PTZ capabilities (`pan_tilt`, `zoom`); all false if the camera is unreachable |
+| `POST /api/cameras/{id}/ptz/move` · `/ptz/stop` | PTZ control: `{"dir":"left\|right\|up\|down\|zoom_in\|zoom_out"}` starts a movement that auto-stops after ~3 s unless repeated; `/ptz/stop` stops it. `409` if the camera has no PTZ, `502` if it does not respond |
 | `GET /api/events` | Query events by camera / time window / label |
 | `GET /api/events/{id}/snapshot` · `/crop` · `/clip` | Event image assets and MP4 clip (Range-capable) |
 | `GET /api/events/stream` | Server-sent events for live UI updates |
