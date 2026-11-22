@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"slices"
 	"sync"
@@ -70,6 +71,13 @@ type Manager struct {
 	// entry's last Stop and its replacement's first Move must still exclude
 	// each other, so every entry of one camera id shares one lock.
 	locks map[string]chan struct{}
+
+	// failing holds the camera ids whose last recorded probe failed, so the
+	// log carries one line per transition rather than one per probe. Like
+	// locks it survives Reset: a config reload that probes a still-broken
+	// camera again must not repeat the warning.
+	healthMu sync.Mutex
+	failing  map[string]bool
 }
 
 // NewManager returns a Manager with production timeouts. A nil logger
@@ -91,6 +99,7 @@ func NewManager(logger *slog.Logger) *Manager {
 		stopRetryDelay: defaultStopRetryDelay,
 		entries:        map[string]*entry{},
 		locks:          map[string]chan struct{}{},
+		failing:        map[string]bool{},
 	}
 }
 
@@ -215,7 +224,8 @@ func (m *Manager) startProbeLocked(e *entry) *probeCall {
 		// An outcome says something about the camera only if the probe ran to
 		// its own conclusion: not if the entry was retired (Reset, changed
 		// target) or the probe was otherwise cancelled.
-		if !e.dead && !errors.Is(err, context.Canceled) {
+		recorded := !e.dead && !errors.Is(err, context.Canceled)
+		if recorded {
 			o := &outcome{caps: pc.caps, err: pc.err, until: time.Now().Add(m.capsTTL)}
 			if err != nil {
 				// A rejected login is remembered for long: retrying it
@@ -234,9 +244,49 @@ func (m *Manager) startProbeLocked(e *entry) *probeCall {
 			e.probe = nil
 		}
 		e.mu.Unlock()
+		if recorded {
+			m.noteProbe(e.id, err)
+		}
 		close(pc.done)
 	}()
 	return pc
+}
+
+// noteProbe logs probe health transitions for camera id: one Warn when it goes
+// from not-failed (unknown, OK, or reachable without PTZ) to failed, one Info
+// when it recovers, nothing for repeats. The log never carries the error text,
+// which may name URLs or credentials; the class is the only detail.
+func (m *Manager) noteProbe(id string, err error) {
+	m.healthMu.Lock()
+	was := m.failing[id]
+	is := err != nil
+	if is {
+		m.failing[id] = true
+	} else {
+		delete(m.failing, id)
+	}
+	m.healthMu.Unlock()
+	switch {
+	case is && !was:
+		m.log.Warn("ptz: probe failed", "camera", id, "class", failureClass(err))
+	case !is && was:
+		m.log.Info("ptz: probe recovered", "camera", id)
+	}
+}
+
+// failureClass buckets a probe error: auth (the camera rejected our login),
+// timeout, unreachable (could not connect) or protocol (anything else).
+func failureClass(err error) string {
+	var ne net.Error
+	switch {
+	case isAuthFailure(err):
+		return "auth"
+	case errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &ne) && ne.Timeout()):
+		return "timeout"
+	case errors.As(err, new(*net.OpError)) || errors.As(err, new(*net.DNSError)):
+		return "unreachable"
+	}
+	return "protocol"
 }
 
 // resolve returns the entry for cam together with its client and

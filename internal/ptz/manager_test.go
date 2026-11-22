@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -798,4 +799,206 @@ func TestIsAuthFailure(t *testing.T) {
 			t.Errorf("isAuthFailure(%v) = true, want false", err)
 		}
 	}
+}
+
+// logRec is one captured log record.
+type logRec struct {
+	level slog.Level
+	msg   string
+	attrs map[string]string
+}
+
+// text is everything the record says, for leak checks.
+func (r logRec) text() string {
+	out := r.msg
+	for k, v := range r.attrs {
+		out += " " + k + "=" + v
+	}
+	return out
+}
+
+// captureLog is a slog.Handler that keeps every record at every level.
+type captureLog struct {
+	mu   sync.Mutex
+	recs []logRec
+}
+
+func (c *captureLog) Enabled(context.Context, slog.Level) bool { return true }
+func (c *captureLog) WithAttrs([]slog.Attr) slog.Handler       { return c }
+func (c *captureLog) WithGroup(string) slog.Handler            { return c }
+func (c *captureLog) Handle(_ context.Context, r slog.Record) error {
+	rec := logRec{level: r.Level, msg: r.Message, attrs: map[string]string{}}
+	r.Attrs(func(a slog.Attr) bool {
+		rec.attrs[a.Key] = a.Value.String()
+		return true
+	})
+	c.mu.Lock()
+	c.recs = append(c.recs, rec)
+	c.mu.Unlock()
+	return nil
+}
+
+// at returns the captured records of the given level.
+func (c *captureLog) at(l slog.Level) []logRec {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var out []logRec
+	for _, r := range c.recs {
+		if r.level == l {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+// all returns every captured record.
+func (c *captureLog) all() []logRec {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return append([]logRec(nil), c.recs...)
+}
+
+func newLoggedManager(t *testing.T) (*Manager, *captureLog) {
+	t.Helper()
+	m := newManager(t, time.Second)
+	cl := &captureLog{}
+	m.log = slog.New(cl)
+	return m, cl
+}
+
+func closedPortCam(t *testing.T) config.Camera {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := l.Addr().String()
+	l.Close()
+	return config.Camera{ID: "c1", SourceMain: "rtsp://u:wrong@127.0.0.1/x", OnvifURL: "http://" + addr + "/onvif/device_service"}
+}
+
+func TestProbeFailureLogsOneWarnWithClass(t *testing.T) {
+	cases := []struct {
+		class string
+		cam   func(t *testing.T) config.Camera
+	}{
+		{"auth", func(t *testing.T) config.Camera { c, _ := wrongPasswordCam(t); c.ID = "c1"; return c }},
+		{"timeout", blackhole},
+		{"unreachable", closedPortCam},
+		{"protocol", func(t *testing.T) config.Camera { c, _ := countingServer(t); return c }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.class, func(t *testing.T) {
+			cam := tc.cam(t)
+			m, cl := newLoggedManager(t)
+			m.probeTimeout = 300 * time.Millisecond
+			m.failureTTL = 20 * time.Millisecond
+			if _, err := m.Caps(context.Background(), cam); err == nil {
+				t.Fatal("Caps err = nil, want a failure")
+			}
+			// Probe the failing camera again (a few times, past the failure
+			// TTL): still exactly one Warn.
+			for i := 0; i < 3; i++ {
+				time.Sleep(60 * time.Millisecond)
+				_, _ = m.Caps(context.Background(), cam)
+			}
+			warns := cl.at(slog.LevelWarn)
+			if len(warns) != 1 {
+				t.Fatalf("got %d Warn records, want exactly 1: %+v", len(warns), warns)
+			}
+			w := warns[0]
+			if w.msg != "ptz: probe failed" || w.attrs["camera"] != cam.ID || w.attrs["class"] != tc.class {
+				t.Errorf("Warn = %+v, want msg %q camera=%q class=%q", w, "ptz: probe failed", cam.ID, tc.class)
+			}
+			if len(w.attrs) != 2 {
+				t.Errorf("Warn attrs = %v, want only camera and class", w.attrs)
+			}
+			for _, r := range cl.all() {
+				for _, leak := range []string{"wrong", "127.0.0.1", "device_service", "http", "u:"} {
+					if strings.Contains(r.text(), leak) {
+						t.Errorf("log record leaks %q: %+v", leak, r)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestAuthProbeFailureWarnedOnceAcrossReset(t *testing.T) {
+	cam, _ := wrongPasswordCam(t)
+	m, cl := newLoggedManager(t)
+	for i := 0; i < 3; i++ {
+		if _, err := m.Caps(context.Background(), cam); err == nil {
+			t.Fatal("Caps err = nil, want an auth failure")
+		}
+		m.Reset() // config reload: probes again, still the same failing camera
+	}
+	if n := len(cl.at(slog.LevelWarn)); n != 1 {
+		t.Errorf("got %d Warn records across resets, want 1", n)
+	}
+}
+
+func TestNoPTZCameraIsNotAProbeFailure(t *testing.T) {
+	fake := newCam(t, ptztest.Options{NoPTZService: true})
+	m, cl := newLoggedManager(t)
+	if _, err := m.Caps(context.Background(), camFor(fake)); err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range cl.all() {
+		if r.level >= slog.LevelInfo {
+			t.Errorf("unexpected log at %v: %+v", r.level, r)
+		}
+	}
+}
+
+func TestProbeRecoveryIsLoggedAndRefailureWarnsAgain(t *testing.T) {
+	fake := ptzFake(t)
+	target, err := url.Parse(fake.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var failing atomic.Bool
+	failing.Store(true)
+	rp := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: target.Scheme, Host: target.Host})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if failing.Load() {
+			http.Error(w, "down", http.StatusInternalServerError)
+			return
+		}
+		rp.ServeHTTP(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	cam := config.Camera{ID: "c1", SourceMain: "rtsp://u:p@127.0.0.1/x", OnvifURL: srv.URL + target.Path}
+
+	m, cl := newLoggedManager(t)
+	m.failureTTL = 20 * time.Millisecond
+	m.capsTTL = 20 * time.Millisecond
+
+	if _, err := m.Caps(context.Background(), cam); err == nil {
+		t.Fatal("Caps err = nil, want failure")
+	}
+	if n := len(cl.at(slog.LevelWarn)); n != 1 {
+		t.Fatalf("Warn records = %d, want 1", n)
+	}
+	failing.Store(false)
+	eventually(t, "recovery", func() bool {
+		_, err := m.Caps(context.Background(), cam)
+		return err == nil
+	})
+	infos := cl.at(slog.LevelInfo)
+	if len(infos) != 1 || infos[0].msg != "ptz: probe recovered" || infos[0].attrs["camera"] != "c1" {
+		t.Fatalf("Info records = %+v, want exactly one %q for c1", infos, "ptz: probe recovered")
+	}
+	// Staying healthy logs nothing more.
+	time.Sleep(100 * time.Millisecond)
+	_, _ = m.Caps(context.Background(), cam)
+	if n := len(cl.at(slog.LevelInfo)); n != 1 {
+		t.Errorf("Info records = %d after more successes, want still 1", n)
+	}
+	// Fail again after the success: a new Warn.
+	failing.Store(true)
+	eventually(t, "second failure to be logged", func() bool {
+		_, _ = m.Caps(context.Background(), cam)
+		return len(cl.at(slog.LevelWarn)) == 2
+	})
 }
