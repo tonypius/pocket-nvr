@@ -23,9 +23,11 @@ int64_t nowMs() {
 } // namespace
 
 Capture::Capture(CamCfg cfg, int slot, int frame_w, int frame_h,
-				 FrameQueue& queue, const std::atomic<double>& fpsScale)
+				 FrameQueue& queue, const std::atomic<double>& fpsScale,
+				 const std::atomic<bool>* eventOpen)
 	: cfg_(std::move(cfg)), slot_(slot), w_(frame_w), h_(frame_h),
-	  queue_(queue), fps_scale_(fpsScale), gate_(cfg.motion_area) {}
+	  queue_(queue), fps_scale_(fpsScale), event_open_(eventOpen),
+	  gate_(cfg_.motion_area) {} // cfg_, not the moved-from parameter
 
 void Capture::start() {
 	th_ = std::thread([this] { run(); });
@@ -39,11 +41,13 @@ void Capture::stop() {
 void Capture::run() {
 	while (!stopping_) {
 		// Scale to the fixed analyze frame and cap fps in ffmpeg so decode
-		// cost stays at the configured cadence (FR-DET-1). Absolute fallback
-		// keeps capture working even when PATH lacks our bin dir.
+		// cost stays at the configured cadence (FR-DET-1). `exec` so the SIGKILL
+		// below hits ffmpeg itself, not just the sh wrapper (which left an
+		// orphaned ffmpeg behind on every stop). The absolute fallback keeps
+		// capture working even when PATH lacks our bin dir.
 		std::string cmd =
 			"FF=$(command -v ffmpeg 2>/dev/null || echo /data/nvr/bin/ffmpeg); "
-			"$FF -loglevel error -nostdin -rtsp_transport tcp -i " + cfg_.sub_url +
+			"exec $FF -loglevel error -nostdin -rtsp_transport tcp -i " + cfg_.sub_url +
 			" -vf fps=" + std::to_string(cfg_.fps) +
 			",scale=" + std::to_string(w_) + ":" + std::to_string(h_) +
 			" -pix_fmt bgr24 -f rawvideo pipe:1";
@@ -103,7 +107,11 @@ bool Capture::pump(int fd) {
 		}
 		stats_.gate_total.fetch_add(1);
 		bool motion = gate_.Process(gray.data(), w_, h_);
-		if (!motion) continue;
+		// An open event keeps every frame flowing: a person who stands still no
+		// longer trips the gate and must not be mistaken for "gone". Process()
+		// above still runs so the gate keeps its reference state.
+		bool open = event_open_ && event_open_->load();
+		if (!motion && !open) continue;
 
 		// Thermal governor (FR-DET-10): 1.0 = normal, 0.5 = every other
 		// frame, 0 = paused.
@@ -118,15 +126,16 @@ bool Capture::pump(int fd) {
 		f.ts_ms = nowMs();
 		f.camera_slot = slot_;
 		f.data = buf; // forward the BGR frame
+		const int64_t ts = f.ts_ms; // f is moved-from after Push
 		queue_.Push(std::move(f));
 		stats_.gate_pass.fetch_add(1);
 
 		// effective fps over a 5 s window
 		++window_frames;
-		int64_t dt = f.ts_ms - window_start;
+		int64_t dt = ts - window_start;
 		if (dt >= 5000) {
 			stats_.fps.store(double(window_frames) * 1000.0 / double(dt));
-			window_start = f.ts_ms;
+			window_start = ts;
 			window_frames = 0;
 		}
 	}

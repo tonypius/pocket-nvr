@@ -241,6 +241,39 @@ func TestConfigPutRejectsInvalid(t *testing.T) {
 	r.Body.Close()
 }
 
+func TestConfigPutRejectsUnknownSecrets(t *testing.T) {
+	srv, ts := setup(t)
+	before, err := os.ReadFile(filepath.Join(srv.cfgDir, "config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A camera whose credentials were never saved: the reload would refuse
+	// it, so the PUT must fail loudly and leave config.yaml untouched.
+	_, cfgBody := get(t, ts.URL+"/api/config", "sekrit")
+	bad := strings.NewReplacer("cam_user", "cam999_user", "cam_pass", "cam999_pass").
+		Replace(string(cfgBody))
+	req, _ := http.NewRequest("PUT", ts.URL+"/api/config", strings.NewReader(bad))
+	req.Header.Set("X-Api-Token", "sekrit")
+	req.Header.Set("Content-Type", "application/json")
+	r, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := readAll(r)
+	if r.StatusCode != http.StatusBadRequest {
+		t.Fatalf("unknown secrets should 400, got %d: %s", r.StatusCode, body)
+	}
+	for _, want := range []string{"cam999_user", "cam999_pass"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("error should name %s: %s", want, body)
+		}
+	}
+	after, _ := os.ReadFile(filepath.Join(srv.cfgDir, "config.yaml"))
+	if string(after) != string(before) {
+		t.Fatal("config.yaml must not change when the PUT is rejected")
+	}
+}
+
 func TestSecretsPost(t *testing.T) {
 	_, ts := setup(t)
 	req, _ := http.NewRequest("POST", ts.URL+"/api/secrets", strings.NewReader(`{"front_user":"bob"}`))
@@ -304,4 +337,22 @@ func loadedCfg(t *testing.T, dir string) *config.Config {
 		t.Fatal(err)
 	}
 	return c
+}
+
+// A rotated api_token must apply on reload without restarting nvrd.
+func TestSetTokenRotatesAuth(t *testing.T) {
+	srv, ts := setup(t)
+	if r, _ := get(t, ts.URL+"/api/health", "sekrit"); r.StatusCode != 200 {
+		t.Fatalf("old token should work before rotation, got %d", r.StatusCode)
+	}
+	srv.SetToken("rotated")
+	if r, _ := get(t, ts.URL+"/api/health", "sekrit"); r.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("old token must be rejected after rotation, got %d", r.StatusCode)
+	}
+	if r, _ := get(t, ts.URL+"/api/health", "rotated"); r.StatusCode != 200 {
+		t.Fatalf("new token should work, got %d", r.StatusCode)
+	}
+	if r, _ := get(t, ts.URL+"/api/health", ""); r.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("empty token must be rejected, got %d", r.StatusCode)
+	}
 }

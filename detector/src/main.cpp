@@ -1,7 +1,8 @@
 // nvrdet — the PocketNVR detector daemon (COMP-3, FRS §4.3).
 // Architecture (AD-1/AD-3): per-camera ffmpeg capture threads (motion-gated,
 // sub-stream from MediaMTX localhost) → ONE shared bounded queue → ONE
-// NCNN/Vulkan inference worker → per-camera zones + event state machine →
+// NCNN inference worker (CPU by default, Vulkan optional) → per-camera zones
+// + event state machine →
 // event POST to nvrd's internal API. A thermal governor scales the pipeline
 // and a heartbeat thread reports gauges (FR-DET-12).
 #include "backend_ncnn.h"
@@ -33,6 +34,7 @@ namespace {
 std::atomic<bool> g_running{true};
 std::atomic<double> g_fpsScale{1.0};
 std::atomic<double> g_tempC{-1.0};
+std::atomic<bool> g_reload{false}; // SIGHUP: re-exec once the pipeline drained
 
 int64_t nowMs() {
 	timespec ts{};
@@ -70,6 +72,21 @@ int parseHostPort(const std::string& url, std::string& host, int& port) {
 } // namespace
 
 int main(int argc, char** argv) {
+	// Control signals are consumed only by the sigwait thread below. They must
+	// be blocked BEFORE any other thread starts so every thread inherits the
+	// mask; blocking after the capture/worker threads exist left those threads
+	// able to take SIGHUP. nvrctl launches us via nohup, which leaves SIGHUP
+	// ignored (and the ignore survives exec), so a reload sent by nvrd was
+	// silently discarded: restore the default disposition first.
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGHUP);
+	sigaddset(&set, SIGTERM);
+	sigaddset(&set, SIGINT);
+	signal(SIGHUP, SIG_DFL);
+	pthread_sigmask(SIG_BLOCK, &set, nullptr);
+
+	const char* argv0 = argc > 0 ? argv[0] : "nvrdet";
 	std::string cfgPath = "/data/nvr/detector.json";
 	for (int i = 1; i < argc; ++i) {
 		if (std::strcmp(argv[i], "-c") == 0 && i + 1 < argc) cfgPath = argv[++i];
@@ -104,13 +121,21 @@ int main(int argc, char** argv) {
 	int api_port = 8099;
 	parseHostPort(cfg.api_url, api_host, api_port);
 
+	// Per-camera "event open" flags: while a camera has an open event its
+	// frames bypass the motion gate, so a person who stands still (and so
+	// stops tripping the gate) keeps being analysed instead of being read as
+	// "gone" by the silence feeder.
+	std::unique_ptr<std::atomic<bool>[]> eventOpen(
+		new std::atomic<bool>[cfg.cameras.empty() ? 1 : cfg.cameras.size()]);
+	for (size_t i = 0; i < cfg.cameras.size(); ++i) eventOpen[i].store(false);
+
 	for (size_t i = 0; i < cfg.cameras.size(); ++i) {
 		const auto& c = cfg.cameras[i];
 		machines.emplace_back(c.enter, c.exit_frames);
 		cams.push_back(c);
 		auto cap = std::make_unique<nvr::Capture>(c, int(cams.size() - 1),
 												  cfg.frame_w, cfg.frame_h,
-												  queue, g_fpsScale);
+												  queue, g_fpsScale, &eventOpen[i]);
 		cap->start();
 		captures.push_back(std::move(cap));
 	}
@@ -156,17 +181,15 @@ int main(int argc, char** argv) {
 				auto jpeg = nvr::encodeSnapshotJpeg(pk.frame, pk.bbox);
 				body += ",\"snapshot_jpeg_b64\":\"" +
 						nvr::base64Encode(jpeg.data(), jpeg.size()) + "\"";
-			}
 				auto cropJpeg = nvr::encodeCropJpeg(pk.frame, pk.bbox);
 				if (!cropJpeg.empty())
 					body += ",\"crop_jpeg_b64\":\"" +
 							nvr::base64Encode(cropJpeg.data(), cropJpeg.size()) + "\"";
+			}
 			body += "}";
-			{ FILE* df = fopen("/data/local/tmp/nvrdet_last_body.json", "w");
-			  if (df) { fwrite(body.data(), 1, body.size(), df); fclose(df); } }
-			FILE* dbg = fopen("/data/local/tmp/nvrdet_body.json", "w");
-if (dbg) { fwrite(body.data(), 1, body.size(), dbg); fclose(dbg); }
-bool ok = nvr::httpPost(api_host, api_port,
+			// (a leftover debug dump wrote every event body, snapshots
+			// included, to /data/local/tmp where adb shell can read it)
+			bool ok = nvr::httpPost(api_host, api_port,
 									"/api/internal/events", cfg.api_token, body);
 			fprintf(stderr, "nvrdet: event on %s label=%s score=%.2f %s\n",
 					cam.id.c_str(), pk.label.c_str(), rec.peak_score,
@@ -191,6 +214,7 @@ bool ok = nvr::httpPost(api_host, api_port,
 				if (machines[i].OnFrame(false, 0, zero, now) ==
 					nvr::EventSignal::Exited)
 					emitEvent(i);
+				eventOpen[i].store(machines[i].active());
 			}
 		};
 
@@ -259,6 +283,13 @@ bool ok = nvr::httpPost(api_host, api_port,
 			}
 
 			if (sig == nvr::EventSignal::Exited) emitEvent(slot);
+			eventOpen[slot].store(sm.active());
+		}
+
+		// Shutdown / reload: events still open would otherwise be lost (the
+		// state machine only reports on exit). Close and report them now.
+		for (size_t i = 0; i < cams.size(); ++i) {
+			if (machines[i].ForceClose(nowMs())) emitEvent(i);
 		}
 	});
 
@@ -301,35 +332,39 @@ bool ok = nvr::httpPost(api_host, api_port,
 		}
 	});
 
-	// SIGHUP: re-exec → fresh config, cheap hot-reload (FR-DET-11).
-	sigset_t set;
-	sigemptyset(&set);
-	sigaddset(&set, SIGHUP);
-	sigaddset(&set, SIGTERM);
-	sigaddset(&set, SIGINT);
-	pthread_sigmask(SIG_BLOCK, &set, nullptr);
+	// SIGHUP / SIGTERM / SIGINT: stop the pipeline cleanly. The worker flushes
+	// any open events on its way out; for SIGHUP the process re-execs itself
+	// afterwards (FR-DET-11) so a reload never drops an in-flight event.
+	// (signals are blocked at the top of main(), before any thread exists)
 	std::thread signals([&] {
 		int s = 0;
-		while (true) {
-			sigwait(&set, &s);
-			if (s == SIGHUP) {
-				fprintf(stderr, "nvrdet: SIGHUP → re-exec\n");
-				execl("/proc/self/exe", "nvrdet", "-c", cfgPath.c_str(), (char*)nullptr);
-				// non-Android fallback
-				execlp("nvrdet", "nvrdet", "-c", cfgPath.c_str(), (char*)nullptr);
-				_exit(127);
-			}
+		sigwait(&set, &s);
+		if (s == SIGHUP) {
+			fprintf(stderr, "nvrdet: SIGHUP → re-exec\n");
+			g_reload = true;
+		} else {
 			fprintf(stderr, "nvrdet: signal %d → shutdown\n", s);
-			g_running = false;
-			queue.Stop();
-			return;
 		}
+		g_running = false;
+		queue.Stop();
 	});
 
 	worker.join();
 	for (auto& c : captures) c->stop();
 	gov.stop();
 	signals.join();
+	heartbeat.join(); // a joinable std::thread at scope exit aborts the process
+
+	if (g_reload) {
+		// exec runs no destructors; captures (and their ffmpeg children) were
+		// stopped above or each reload would leak one ffmpeg per camera.
+		// Keep the ORIGINAL argv[0]: nvrctl identifies the daemon by it, and a
+		// bare "nvrdet" made the watchdog start a second detector.
+		execl("/proc/self/exe", argv0, "-c", cfgPath.c_str(), (char*)nullptr);
+		// non-Android fallback
+		execlp(argv0, argv0, "-c", cfgPath.c_str(), (char*)nullptr);
+		_exit(127);
+	}
 	fprintf(stderr, "nvrdet: stopped\n");
 	return 0;
 }

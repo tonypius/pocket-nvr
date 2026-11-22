@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -171,6 +172,35 @@ func (c *Config) WithPlaceholdersResolved() *Config {
 	}
 	walkStrings(reflect.ValueOf(&dup).Elem(), sanitizePlaceholders)
 	return &dup
+}
+
+// MissingSecrets returns the sorted, de-duplicated ${secret:key} names that
+// the config references but secrets does not define. A reload would refuse
+// such a config, so callers writing config to disk should reject it first.
+func (c *Config) MissingSecrets(secrets map[string]string) []string {
+	seen := map[string]bool{}
+	var missing []string
+	walkStrings(reflect.ValueOf(c).Elem(), func(s string) string {
+		for {
+			i := strings.Index(s, SecretPrefix)
+			if i < 0 {
+				return s
+			}
+			rest := s[i+len(SecretPrefix):]
+			j := strings.Index(rest, "}")
+			if j < 0 {
+				return s
+			}
+			key := rest[:j]
+			if _, ok := secrets[key]; !ok && !seen[key] {
+				seen[key] = true
+				missing = append(missing, key)
+			}
+			s = rest[j+1:]
+		}
+	})
+	sort.Strings(missing)
+	return missing
 }
 
 func sanitizePlaceholders(s string) string {

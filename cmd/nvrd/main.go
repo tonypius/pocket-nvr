@@ -113,16 +113,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Live config/secrets for background goroutines. The SIGHUP reload swaps
+	// these atomically; goroutines used to read the plain `cfg`/`secrets`
+	// variables directly (a data race), and secrets were never re-read, so a
+	// secret saved in Settings (ntfy topic, Telegram token, rotated API
+	// token) only took effect after a full nvrd restart.
+	var curCfg atomic.Pointer[config.Config]
+	curCfg.Store(cfg)
+	var curSecrets atomic.Pointer[map[string]string]
+	curSecrets.Store(&secrets)
+	getCfg := func() *config.Config { return curCfg.Load() }
+	secret := func(k string) string { return (*curSecrets.Load())[k] }
+
 	redactor := config.NewRedactorFromTemplates(redactTemplates)
 	srv := api.New(cfg, redactor, apiToken, st, logger, uiDir())
 	srv.SetDirs(*cfgDir)
 	srv.SetHupSelf(func() { _ = syscall.Kill(os.Getpid(), syscall.SIGHUP) })
 
 	// COMP-5 + FR-EVT-3: detector events → notifications + clip extraction.
-	notifier := notify.New(cfgGet(&cfg), keyGet(&secrets), st, logger)
-	extractor := clips.New(cfgGet(&cfg), st, logger, ffmpegPath())
+	notifier := notify.New(getCfg, secret, st, logger)
+	extractor := clips.New(getCfg, st, logger, ffmpegPath())
 	srv.SetEventHandler(func(cameraID, cameraName string, eventID, startTS, endTS int64, score float64, snapshot []byte) {
-		link := deepLink(cfg, secrets["api_token"], eventID)
+		link := deepLink(getCfg(), secret("api_token"), eventID)
 		delivered, why := notifier.Enqueue(notify.Item{
 			EventID: eventID, CameraID: cameraID, Camera: cameraName,
 			Score: score, StartTS: startTS, Snapshot: snapshot, DeepLink: link,
@@ -151,7 +163,7 @@ func main() {
 		}
 		for _, e := range pending {
 			cameraName := e.CameraID
-			for _, c := range cfg.Cameras {
+			for _, c := range getCfg().Cameras {
 				if c.ID == e.CameraID {
 					cameraName = c.Name
 					break
@@ -160,7 +172,7 @@ func main() {
 			notifier.Enqueue(notify.Item{
 				EventID: e.ID, CameraID: e.CameraID, Camera: cameraName,
 				Score: e.Score, StartTS: e.StartTS,
-				DeepLink: deepLink(cfg, secrets["api_token"], e.ID),
+				DeepLink: deepLink(getCfg(), secret("api_token"), e.ID),
 			})
 		}
 		if len(pending) > 0 {
@@ -168,7 +180,7 @@ func main() {
 		}
 	}()
 
-	go retention.Run(ctx, st, cfgGet(&cfg), logger, 10*time.Minute)
+	go retention.Run(ctx, st, getCfg, logger, 10*time.Minute)
 
 	// Free-space guard (FR-SUP-8): below min free → prune now; if still
 	// low → pause continuous recording by reloading MediaMTX with
@@ -184,11 +196,14 @@ func main() {
 	var recOverride atomic.Pointer[bool]
 	go func() {
 		paused := false
-		base := filepath.Dir(*cfgDir) // config dir == base on the device
-		if cfg.System.BasePath != "" {
-			base = cfg.System.BasePath
-		}
 		for {
+			// re-read each tick: a Settings save can change base_path and
+			// the free-space floor without restarting nvrd
+			cfg := getCfg()
+			base := filepath.Dir(*cfgDir) // config dir == base on the device
+			if cfg.System.BasePath != "" {
+				base = cfg.System.BasePath
+			}
 			minBytes := uint64(cfg.System.StorageMinFreeGB) * 1e9
 			free, ok := api.FreeDiskBytes(base)
 			if ok {
@@ -249,11 +264,23 @@ func main() {
 	signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM)
 	for s := range sig {
 		if s == syscall.SIGHUP {
-			if nc, nrt, err := config.LoadEx(*cfgDir); err != nil {
+			nc, nrt, err := config.LoadEx(*cfgDir)
+			var ns map[string]string
+			if err == nil {
+				// secrets are re-read too: notification providers, the API
+				// token and deep links all derive from them
+				if ns, err = config.LoadSecrets(filepath.Join(*cfgDir, "secrets.yaml")); err == nil && ns["api_token"] == "" {
+					err = fmt.Errorf("secrets.yaml: api_token is required")
+				}
+			}
+			if err != nil {
 				logger.Error("reload refused (keeping previous config)", "err", err)
 			} else {
 				cfg = nc
-				srv.SwapConfig(cfg, config.NewRedactorFromTemplates(nrt))
+				curCfg.Store(nc)
+				curSecrets.Store(&ns)
+				srv.SetToken(ns["api_token"])
+				srv.SwapConfig(nc, config.NewRedactorFromTemplates(nrt))
 				notifier.Reload()
 				// regenerate downstream runtime configs (FR-CFG-1) and nudge
 				// MediaMTX; the detector re-execs on its own SIGHUP. The
@@ -265,6 +292,10 @@ func main() {
 				}
 				if err := writeDetectorConfig(cfg, *cfgDir, filepath.Join(baseOf(cfg), "detector.json")); err != nil {
 					logger.Error("regen detector.json", "err", err)
+				} else if err := hupProcess("detector", baseOf(cfg)); err != nil {
+					// without this the detector keeps analysing the old camera
+					// set until it is restarted by hand
+					logger.Warn("reload detector", "err", err)
 				}
 				logger.Info("config reloaded")
 			}
@@ -287,16 +318,6 @@ func baseOf(cfg *config.Config) string {
 		return "/data/nvr"
 	}
 	return cfg.System.BasePath
-}
-
-// cfgGet / keyGet give subsystems a live view of the current config and
-// secrets without leaking the pointers around main.
-func cfgGet(p **config.Config) func() *config.Config {
-	return func() *config.Config { return *p }
-}
-
-func keyGet(m *map[string]string) func(string) string {
-	return func(k string) string { return (*m)[k] }
 }
 
 // deepLink builds the tappable event URL for pushes (FR-NOT-2). The API
