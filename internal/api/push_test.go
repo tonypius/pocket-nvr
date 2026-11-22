@@ -24,7 +24,7 @@ func pushKeys(t *testing.T) (p256dh, auth string) {
 	return base64.RawURLEncoding.EncodeToString(k.PublicKey().Bytes()), base64.RawURLEncoding.EncodeToString(a)
 }
 
-func post(t *testing.T, url, token, body string) (*http.Response, string) {
+func postJSON(t *testing.T, url, token, body string) (*http.Response, string) {
 	t.Helper()
 	req, _ := http.NewRequest("POST", url, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -57,7 +57,7 @@ func TestPushVAPIDKeyAndAuth(t *testing.T) {
 	}
 	// subscribing is not anonymous either
 	p, a := pushKeys(t)
-	if r, _ := post(t, ts.URL+"/api/push/subscribe", "", subBody("https://fcm.googleapis.com/x", p, a)); r.StatusCode != http.StatusUnauthorized {
+	if r, _ := postJSON(t, ts.URL+"/api/push/subscribe", "", subBody("https://fcm.googleapis.com/x", p, a)); r.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("subscribe without token → 401, got %d", r.StatusCode)
 	}
 }
@@ -68,12 +68,12 @@ func TestPushSubscribeLifecycle(t *testing.T) {
 	p, a := pushKeys(t)
 	ep := "https://fcm.googleapis.com/fcm/send/abc"
 
-	r, body := post(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(ep, p, a))
+	r, body := postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(ep, p, a))
 	if r.StatusCode != http.StatusCreated {
 		t.Fatalf("subscribe: %d %s", r.StatusCode, body)
 	}
 	// idempotent: re-subscribing the same device keeps one row
-	post(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(ep, p, a))
+	postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(ep, p, a))
 	if n, _ := srv.store.CountPushSubs(); n != 1 {
 		t.Fatalf("want 1 subscription, got %d", n)
 	}
@@ -86,12 +86,12 @@ func TestPushSubscribeLifecycle(t *testing.T) {
 		t.Fatalf("status = %s (%v)", st, err)
 	}
 
-	r, body = post(t, ts.URL+"/api/push/test", "sekrit", "{}")
+	r, body = postJSON(t, ts.URL+"/api/push/test", "sekrit", "{}")
 	if r.StatusCode != 200 || !strings.Contains(body, `"sent": 1`) {
 		t.Fatalf("test push: %d %s", r.StatusCode, body)
 	}
 
-	if r, _ := post(t, ts.URL+"/api/push/unsubscribe", "sekrit", fmt.Sprintf(`{"endpoint":%q}`, ep)); r.StatusCode != 200 {
+	if r, _ := postJSON(t, ts.URL+"/api/push/unsubscribe", "sekrit", fmt.Sprintf(`{"endpoint":%q}`, ep)); r.StatusCode != 200 {
 		t.Fatalf("unsubscribe: %d", r.StatusCode)
 	}
 	if n, _ := srv.store.CountPushSubs(); n != 0 {
@@ -113,18 +113,18 @@ func TestPushSubscribeRejectsBadInput(t *testing.T) {
 		"not a url":   "nonsense",
 		"empty":       "",
 	} {
-		if r, _ := post(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(ep, p, a)); r.StatusCode != http.StatusBadRequest {
+		if r, _ := postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(ep, p, a)); r.StatusCode != http.StatusBadRequest {
 			t.Errorf("%s: endpoint %q should be rejected (SSRF guard), got %d", name, ep, r.StatusCode)
 		}
 	}
 	good := "https://updates.push.services.mozilla.com/wpush/v2/abc"
-	if r, _ := post(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(good, "short", a)); r.StatusCode != http.StatusBadRequest {
+	if r, _ := postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(good, "short", a)); r.StatusCode != http.StatusBadRequest {
 		t.Errorf("bad p256dh should be rejected, got %d", r.StatusCode)
 	}
-	if r, _ := post(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(good, p, "short")); r.StatusCode != http.StatusBadRequest {
+	if r, _ := postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(good, p, "short")); r.StatusCode != http.StatusBadRequest {
 		t.Errorf("bad auth should be rejected, got %d", r.StatusCode)
 	}
-	if r, _ := post(t, ts.URL+"/api/push/subscribe", "sekrit", "{not json"); r.StatusCode != http.StatusBadRequest {
+	if r, _ := postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", "{not json"); r.StatusCode != http.StatusBadRequest {
 		t.Errorf("bad json should be rejected, got %d", r.StatusCode)
 	}
 }
@@ -135,15 +135,15 @@ func TestPushSubscribeCapsDevices(t *testing.T) {
 	p, a := pushKeys(t)
 	for i := 0; i < maxPushDevices; i++ {
 		ep := fmt.Sprintf("https://push.example.com/%d", i)
-		if r, b := post(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(ep, p, a)); r.StatusCode != http.StatusCreated {
+		if r, b := postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", subBody(ep, p, a)); r.StatusCode != http.StatusCreated {
 			t.Fatalf("device %d: %d %s", i, r.StatusCode, b)
 		}
 	}
-	if r, _ := post(t, ts.URL+"/api/push/subscribe", "sekrit", subBody("https://push.example.com/extra", p, a)); r.StatusCode != http.StatusConflict {
+	if r, _ := postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", subBody("https://push.example.com/extra", p, a)); r.StatusCode != http.StatusConflict {
 		t.Fatalf("over the cap should 409, got %d", r.StatusCode)
 	}
 	// an already-subscribed device can still refresh its keys at the cap
-	if r, _ := post(t, ts.URL+"/api/push/subscribe", "sekrit", subBody("https://push.example.com/3", p, a)); r.StatusCode != http.StatusCreated {
+	if r, _ := postJSON(t, ts.URL+"/api/push/subscribe", "sekrit", subBody("https://push.example.com/3", p, a)); r.StatusCode != http.StatusCreated {
 		t.Fatalf("refreshing an existing device at the cap should work, got %d", r.StatusCode)
 	}
 }
@@ -175,7 +175,7 @@ func TestMuteEndpoint(t *testing.T) {
 	}
 
 	// 60 minutes → muted until roughly an hour from now
-	r, body := post(t, ts.URL+"/api/notifications/mute", "sekrit", `{"minutes":60}`)
+	r, body := postJSON(t, ts.URL+"/api/notifications/mute", "sekrit", `{"minutes":60}`)
 	if r.StatusCode != 200 {
 		t.Fatalf("mute 60: %d %s", r.StatusCode, body)
 	}
@@ -185,12 +185,12 @@ func TestMuteEndpoint(t *testing.T) {
 		t.Fatalf("muted=%v until=%d raw=%d (want ≈%d)", m, u, raw, hour)
 	}
 	// indefinitely
-	_, body = post(t, ts.URL+"/api/notifications/mute", "sekrit", `{"minutes":-1}`)
+	_, body = postJSON(t, ts.URL+"/api/notifications/mute", "sekrit", `{"minutes":-1}`)
 	if m, u := view([]byte(body)); !m || u != -1 {
 		t.Fatalf("-1 should mute until switched back on: %v %d", m, u)
 	}
 	// unmute
-	_, body = post(t, ts.URL+"/api/notifications/mute", "sekrit", `{"minutes":0}`)
+	_, body = postJSON(t, ts.URL+"/api/notifications/mute", "sekrit", `{"minutes":0}`)
 	if m, u := view([]byte(body)); m || u != 0 || raw != 0 {
 		t.Fatalf("0 should unmute: %v %d raw=%d", m, u, raw)
 	}
@@ -201,7 +201,7 @@ func TestMuteEndpoint(t *testing.T) {
 		t.Fatalf("expired snooze must read unmuted: %v %d", m, u)
 	}
 	for _, bad := range []string{`{}`, `{"minutes":-5}`, `{"minutes":99999999}`, `nope`, `{"minutes":"60"}`} {
-		if r, _ := post(t, ts.URL+"/api/notifications/mute", "sekrit", bad); r.StatusCode != http.StatusBadRequest {
+		if r, _ := postJSON(t, ts.URL+"/api/notifications/mute", "sekrit", bad); r.StatusCode != http.StatusBadRequest {
 			t.Errorf("body %s should be rejected, got %d", bad, r.StatusCode)
 		}
 	}
@@ -214,7 +214,7 @@ func TestPushTestFailureIsNotAServerError(t *testing.T) {
 	srv.SetPush(func() string { return "PUBKEY" }, func(context.Context) (int, error) {
 		return 0, fmt.Errorf("could not reach the push service: boom")
 	})
-	r, body := post(t, ts.URL+"/api/push/test", "sekrit", "{}")
+	r, body := postJSON(t, ts.URL+"/api/push/test", "sekrit", "{}")
 	if r.StatusCode != http.StatusOK {
 		t.Fatalf("status %d (a 5xx would be masked by Cloudflare): %s", r.StatusCode, body)
 	}

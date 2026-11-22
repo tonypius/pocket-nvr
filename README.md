@@ -18,7 +18,7 @@ It is **not an Android app**. It is a set of native arm64 Linux daemons that run
 - **On-device detection** — ffmpeg capture pipes from the camera sub-stream, motion pre-gating, YOLO11n inference (CPU fp16 by default, Vulkan optional), configurable detection zones and object classes (person, cat, dog, car)
 - **Events** — SQLite event store, peak-frame snapshot with detection-box overlay, cropped object thumbnails, per-event MP4 clips
 - **Notifications** — ntfy and/or Telegram with score thresholds, cooldowns, quiet hours, and a retry queue that replays undelivered events after restart
-- **Web UI (PWA)** — installable from the browser; Home dashboard, Live view (WebRTC/WHEP with an HLS proxy fallback), Events, Detections grid, a Clips feed that plays event clips inline, and full Settings (camera add/edit, ONVIF/RTSP LAN discovery, secrets editor) — all hot-reloading, dark/light theme included
+- **Web UI (PWA)** — installable from the browser; Home dashboard, Live view (WebRTC/WHEP with an HLS proxy fallback), Events, Detections grid, a Clips feed that plays event clips inline, hold-to-move PTZ pan/tilt/zoom on the single-camera live view for ONVIF motorized cameras, and full Settings (camera add/edit, ONVIF/RTSP LAN discovery, secrets editor) — all hot-reloading, dark/light theme included
 - **Appliance ops** — boot-time auto-start + watchdog with restart backoff, log rotation, retention by age/size/count, free-space guard that pauses recording before the disk fills, SoC thermal governor, wakelock, and a configurable charge-cap setting for 24/7 unattended duty
 - **Security** — token auth on every API route, write-only secrets, redacted config reads; remote access via Tailscale or any TCP-only tunnel (the HLS proxy works where WebRTC UDP cannot)
 
@@ -236,12 +236,30 @@ cameras:
       zones: []          # empty = whole frame
 ```
 
+**PTZ (optional).** Motorized cameras need no extra config: the ONVIF endpoint is derived from the `source_main` host (port 2020 for Tapo, then 80 for CP Plus/Dahua) and reuses the credentials in `source_main`. If the camera uses a different port, path or ONVIF login, add an `onvif_url` to that camera: `onvif_url: http://${secret:front_user}:${secret:front_pass}@192.168.1.10:2020/onvif/device_service` (credentials in the URL are optional and default to `source_main`'s). Controls appear on the single-camera live view only for cameras that report PTZ. Presets and auto-tracking are not implemented.
+
 | Secret key | Purpose |
 |---|---|
 | `api_token` | **Required.** Auth for every `/api` route (`Authorization: Bearer`, `X-Api-Token`, or `?token=` for `<img>`/deep links) |
 | `mediamtx_viewer_pass` | MediaMTX viewer auth |
 | `<camera>_user` / `<camera>_pass` | Per-camera RTSP credentials |
 | `ntfy_topic_url`, `telegram_bot_token`, `telegram_chat_id` | Notification providers |
+
+### Verifying PTZ on a real camera
+
+The PTZ code is covered by unit tests against a fake ONVIF camera but has not been confirmed on real hardware. To check a motorized camera:
+
+1. Open **Live**, then open that camera's single-camera view. The six controls (pan left/right, tilt up/down, zoom in/out) should appear over the video.
+2. Hold each button: the camera should move the matching way (left pans left, up tilts up, zoom in magnifies). Release: it should stop promptly.
+3. Hold a button, then close the tab (or switch away from it) mid-move. The camera should stop within about 3 seconds, since the server auto-stops a move that is not renewed.
+4. Open a non-motorized camera: it should show no PTZ controls.
+
+If it fails:
+
+- No controls on a camera that has motors: the capability lookup (`GET /api/cameras/<id>/ptz`) is reporting no PTZ or cannot reach the camera. Confirm the camera account is allowed to use ONVIF: Tapo needs a **Camera Account**, CP Plus needs an **ONVIF user**, and the camera credentials in `source_main` must be that account.
+- Wrong port: ONVIF is on 2020 for Tapo and 80 for CP Plus/Dahua. Both are tried automatically; for anything else set `onvif_url`.
+- Controls missing even with the right account: a failed ONVIF capability lookup shows up as no controls. When a camera's lookup starts failing, `nvrd.log` gets one line, `ptz: probe failed camera=<id> class=<class>`, where `class` is `auth` (the camera rejected the login; check the account, and that the camera's clock is right, since ONVIF logins are time-sensitive: enable NTP or set the date and time in the camera app), `timeout`, `unreachable` (nothing answered on the ONVIF port) or `protocol` (it answered, but not with usable ONVIF). The line is logged once, not on every retry, and a later `ptz: probe recovered` line means it works again. The line never includes the camera address or credentials. A rejected login is not retried for 30 minutes (some cameras lock the account after a few bad logins); changing the camera credentials or reloading the config makes it try again straight away.
+- Moves return `502` ("Camera didn't respond" in the UI): the camera did not answer; check it is reachable from the phone. Move and stop failures are not written to the log at the default level, so the UI message and the HTTP status are the only symptoms.
 
 ## API overview
 
@@ -253,6 +271,8 @@ All routes require the token (except the static app shell). Highlights:
 | `GET/PUT /api/config`, `POST /api/secrets` | Validated config + write-only secrets management |
 | `POST /api/discover` | ONVIF WS-Discovery + RTSP sweep of the local subnet |
 | `GET /api/cameras` | Camera roster with live-playback endpoints |
+| `GET /api/cameras/{id}/ptz` | ONVIF PTZ capabilities (`pan_tilt`, `zoom`); all false if the camera is unreachable |
+| `POST /api/cameras/{id}/ptz/move` · `/ptz/stop` | PTZ control: `{"dir":"left\|right\|up\|down\|zoom_in\|zoom_out"}` starts a movement that auto-stops after ~3 s unless repeated; `/ptz/stop` stops it. `409` if the camera has no PTZ, `502` if it does not respond |
 | `GET /api/events` | Query events by camera / time window / label |
 | `GET /api/events/{id}/snapshot` · `/crop` · `/clip` | Event image assets and MP4 clip (Range-capable) |
 | `GET /api/events/stream` | Server-sent events for live UI updates |

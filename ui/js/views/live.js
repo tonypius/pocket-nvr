@@ -4,6 +4,7 @@
 import { api, esc, el } from "../api.js";
 import { setWantWake } from "../pwa.js";
 import { playTile, stopAll } from "../player.js";
+import { mountPtz } from "../ptz.js";
 
 let camList = [];
 let io = null;
@@ -46,7 +47,12 @@ export async function mount(page, param) {
     const tile = makeTile(one, true);
     page.append(head, tile);
     playTile(tile.querySelector("video"), one, tile);
-    return () => { stopAll(); setWantWake(false); };
+    // PTZ capability lookup can take a few seconds; if we are unmounted first,
+    // clean up as soon as it resolves.
+    let ptzCleanup = () => {};
+    let gone = false;
+    mountPtz(tile, one).then((c) => { if (gone) c(); else ptzCleanup = c; });
+    return () => { gone = true; ptzCleanup(); stopAll(); setWantWake(false); };
   }
 
   const head = el("div", "page-head");

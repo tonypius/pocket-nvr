@@ -115,8 +115,10 @@ review/filter/editor details; UniFi contributes scrubber and layout ergonomics.
 
 ### Explicitly out of scope (for now)
 - Semantic/text-embedding image search (phone CPU budget); AI captions (needs
-  an LLM sidecar — revisit when a home server enters the picture); PTZ and
-  two-way audio (hardware-dependent; note as hardware checklist items);
+  an LLM sidecar — revisit when a home server enters the picture); two-way
+  audio (hardware-dependent; note as a hardware checklist item). PTZ
+  pan/tilt/zoom from the live view is implemented; PTZ presets and
+  auto-tracking remain out of scope;
   native Android viewer (PWA stays the surface; API is already viewer-ready).
 
 ## 5. Phasing (each phase is independently shippable)
@@ -148,7 +150,8 @@ System page. *Done when:* zones are drawable, car/animal events appear as
 chips, health is visible at a glance.
 
 **Stretch**: Stories-style grouping (camera+label+time clustering), export
-timelapse, region-based motion search, ONVIF PTZ, two-way audio.
+timelapse, region-based motion search, two-way audio. (ONVIF PTZ pan/tilt/zoom control from
+the live view is implemented; presets and auto-tracking are not.)
 
 ## 6. Architecture decisions & risks
 

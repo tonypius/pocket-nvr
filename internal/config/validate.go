@@ -212,6 +212,12 @@ func (c *Config) Validate() []string {
 				errf("cameras[%s].%s %q: want rtsp://host[:port]/path", id, u.name, redactURL(u.val))
 			}
 		}
+		if cam.OnvifURL != "" {
+			p, err := url.Parse(cam.OnvifURL)
+			if err != nil || (p.Scheme != "http" && p.Scheme != "https") || p.Host == "" {
+				errf("cameras[%s].onvif_url %q: want http(s)://host[:port]/path", id, redactURL(cam.OnvifURL))
+			}
+		}
 		d := cam.Detect
 		if d.FPS < 1 || d.FPS > 30 {
 			errf("cameras[%s].detect.fps %d: want 1..30", id, d.FPS)

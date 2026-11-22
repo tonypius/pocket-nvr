@@ -259,3 +259,28 @@ h3.sec { font-size: 13px; margin: 20px 0 8px; color: var(--dim);
 .alertbar .alert-state { flex: 1 1 160px; font-size: 13px; }
 .alertbar .alert-state.on { color: var(--ok); }
 .alertbar .alert-state.off { color: var(--warn); }
+
+/* ---- PTZ overlay ---- */
+.ptz { position: absolute; inset: 0; pointer-events: none;
+  transition: opacity .3s; }
+.ptz.idle { opacity: 0; }
+.ptz.idle .ptz-btn { pointer-events: none; }
+.ptz-btn { pointer-events: auto; width: 48px; height: 48px; min-width: 44px; min-height: 44px;
+  padding: 0; border-radius: 10px; border: 1px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.45); color: #fff; font-size: 20px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+.ptz-btn.down { background: rgba(255,255,255,.4); }
+.ptz-zoom { position: absolute; left: 10px; bottom: 10px;
+  display: flex; flex-direction: column; gap: 6px; }
+.ptz-dpad { position: absolute; right: 10px; bottom: 10px;
+  display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 48px);
+  gap: 4px; }
+.ptz-dpad .ptz-up { grid-area: 1 / 2; }
+.ptz-dpad .ptz-left { grid-area: 2 / 1; }
+.ptz-dpad .ptz-right { grid-area: 2 / 3; }
+.ptz-dpad .ptz-down { grid-area: 3 / 2; }
+.ptz-msg { position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+  background: rgba(0,0,0,.75); color: #fff; padding: 6px 12px; border-radius: 8px;
+  font-size: 13px; pointer-events: none; white-space: nowrap; }
