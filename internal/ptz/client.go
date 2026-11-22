@@ -243,8 +243,15 @@ func (c *Client) Move(ctx context.Context, d Direction, timeout time.Duration) e
 	}
 	body := `<tptz:ContinuousMove xmlns:tptz="` + nsPTZ + `" xmlns:tt="` + nsSchema + `">` +
 		`<tptz:ProfileToken>` + escape(c.profile) + `</tptz:ProfileToken>` +
-		`<tptz:Velocity><tt:PanTilt x="` + fmtVel(pan) + `" y="` + fmtVel(tilt) + `"/>` +
-		`<tt:Zoom x="` + fmtVel(zoom) + `"/></tptz:Velocity>`
+		`<tptz:Velocity>`
+	// Only the moved axis is sent: ONVIF has unsupported spaces omitted and
+	// some firmware faults on a Zoom velocity for a node without zoom.
+	if d == ZoomIn || d == ZoomOut {
+		body += `<tt:Zoom x="` + fmtVel(zoom) + `"/>`
+	} else {
+		body += `<tt:PanTilt x="` + fmtVel(pan) + `" y="` + fmtVel(tilt) + `"/>`
+	}
+	body += `</tptz:Velocity>`
 	if timeout > 0 {
 		body += `<tptz:Timeout>` + durationXSD(timeout) + `</tptz:Timeout>`
 	}

@@ -45,7 +45,10 @@ type Options struct {
 // Move is one recorded ContinuousMove request.
 type Move struct {
 	Pan, Tilt, Zoom float64
-	Timeout         string // xsd:duration as sent, e.g. "PT3S"
+	// HasPanTilt and HasZoom report whether the request carried a
+	// <PanTilt> / <Zoom> velocity element at all.
+	HasPanTilt, HasZoom bool
+	Timeout             string // xsd:duration as sent, e.g. "PT3S"
 }
 
 const (
@@ -206,11 +209,11 @@ func (c *Camera) registerPTZOps() {
 		var req struct {
 			Profile  string `xml:"ProfileToken"`
 			Velocity struct {
-				PanTilt struct {
+				PanTilt *struct {
 					X float64 `xml:"x,attr"`
 					Y float64 `xml:"y,attr"`
 				} `xml:"PanTilt"`
-				Zoom struct {
+				Zoom *struct {
 					X float64 `xml:"x,attr"`
 				} `xml:"Zoom"`
 			} `xml:"Velocity"`
@@ -223,8 +226,15 @@ func (c *Camera) registerPTZOps() {
 		if req.Profile != ptzProfileToken {
 			return "", &fault{"ter:NoProfile", "profile does not exist or has no PTZ configuration"}
 		}
+		mv := Move{Timeout: req.Timeout}
+		if pt := req.Velocity.PanTilt; pt != nil {
+			mv.HasPanTilt, mv.Pan, mv.Tilt = true, pt.X, pt.Y
+		}
+		if z := req.Velocity.Zoom; z != nil {
+			mv.HasZoom, mv.Zoom = true, z.X
+		}
 		c.mu.Lock()
-		c.moves = append(c.moves, Move{Pan: req.Velocity.PanTilt.X, Tilt: req.Velocity.PanTilt.Y, Zoom: req.Velocity.Zoom.X, Timeout: req.Timeout})
+		c.moves = append(c.moves, mv)
 		c.mu.Unlock()
 		return `<tptz:ContinuousMoveResponse xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl"/>`, nil
 	}}

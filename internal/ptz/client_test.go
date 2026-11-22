@@ -161,6 +161,12 @@ func TestMoveVelocities(t *testing.T) {
 			if m.Pan != tc.pan || m.Tilt != tc.tilt || m.Zoom != tc.zoom {
 				t.Errorf("move = %+v, want pan=%v tilt=%v zoom=%v", m, tc.pan, tc.tilt, tc.zoom)
 			}
+			// Only the moved axis is sent: some firmware faults on a Zoom
+			// velocity for a node without zoom.
+			zoomMove := tc.dir == ZoomIn || tc.dir == ZoomOut
+			if m.HasPanTilt == zoomMove || m.HasZoom != zoomMove {
+				t.Errorf("move HasPanTilt=%v HasZoom=%v, want only the %s element", m.HasPanTilt, m.HasZoom, map[bool]string{true: "Zoom", false: "PanTilt"}[zoomMove])
+			}
 			if m.Timeout != "PT3S" {
 				t.Errorf("Timeout = %q, want PT3S", m.Timeout)
 			}
