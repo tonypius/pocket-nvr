@@ -141,3 +141,40 @@ func TestQuietMinutes(t *testing.T) {
 		t.Error("empty should be -1")
 	}
 }
+
+func onvifCfg(onvifLine string) string {
+	return "cameras:\n  - id: cam1\n    name: C1\n    source_main: rtsp://u:p@10.0.0.1/main\n    source_sub: rtsp://u:p@10.0.0.1/sub\n" + onvifLine
+}
+
+func TestOnvifURLOptional(t *testing.T) {
+	dir := writeFiles(t, onvifCfg(""), validSecrets)
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := cfg.Cameras[0].OnvifURL; got != "" {
+		t.Errorf("OnvifURL = %q, want empty", got)
+	}
+}
+
+func TestOnvifURLLoadsAndInterpolates(t *testing.T) {
+	dir := writeFiles(t, onvifCfg("    onvif_url: http://${secret:u}:${secret:p}@10.0.0.5:2020/onvif/device_service\n"), "u: bob\np: hunter2\n")
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	want := "http://bob:hunter2@10.0.0.5:2020/onvif/device_service"
+	if got := cfg.Cameras[0].OnvifURL; got != want {
+		t.Errorf("OnvifURL = %q, want %q", got, want)
+	}
+}
+
+func TestOnvifURLRejectsBadScheme(t *testing.T) {
+	for _, bad := range []string{"rtsp://10.0.0.5/x", "not a url"} {
+		dir := writeFiles(t, onvifCfg("    onvif_url: "+bad+"\n"), validSecrets)
+		_, err := Load(dir)
+		if err == nil || !strings.Contains(err.Error(), "onvif_url") {
+			t.Errorf("onvif_url %q: want error naming onvif_url, got %v", bad, err)
+		}
+	}
+}

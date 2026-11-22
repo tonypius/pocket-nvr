@@ -69,11 +69,12 @@ type Zone struct {
 type Camera struct {
 	ID         string `yaml:"id" json:"id"`
 	Name       string `yaml:"name" json:"name"`
-	MainURL    string `yaml:"main_url" json:"main_url"`       // local restream (MediaMTX); derived when empty
-	SubURL     string `yaml:"sub_url" json:"sub_url"`         // local restream (MediaMTX); derived when empty
-	SourceMain string `yaml:"source_main" json:"source_main"` // real camera
-	SourceSub  string `yaml:"source_sub" json:"source_sub"`   // real camera
-	Enabled    *bool  `yaml:"enabled" json:"enabled"`         // nil = enabled (FR-CFG-4 minimal config)
+	MainURL    string `yaml:"main_url" json:"main_url"`                       // local restream (MediaMTX); derived when empty
+	SubURL     string `yaml:"sub_url" json:"sub_url"`                         // local restream (MediaMTX); derived when empty
+	SourceMain string `yaml:"source_main" json:"source_main"`                 // real camera
+	SourceSub  string `yaml:"source_sub" json:"source_sub"`                   // real camera
+	OnvifURL   string `yaml:"onvif_url,omitempty" json:"onvif_url,omitempty"` // optional ONVIF device_service endpoint (PTZ); empty = derive from source_main
+	Enabled    *bool  `yaml:"enabled" json:"enabled"`                         // nil = enabled (FR-CFG-4 minimal config)
 	Detect     Detect `yaml:"detect" json:"detect"`
 }
 

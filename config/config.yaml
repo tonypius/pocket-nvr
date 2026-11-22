@@ -24,6 +24,7 @@ cameras:
     sub_url: rtsp://127.0.0.1:8554/front_tapo_sub
     source_main: rtsp://${secret:front_user}:${secret:front_pass}@192.168.0.20:554/stream1
     source_sub: rtsp://${secret:front_user}:${secret:front_pass}@192.168.0.20:554/stream2
+    # onvif_url: http://${secret:front_user}:${secret:front_pass}@192.168.0.20:2020/onvif/device_service  # optional; enables PTZ. Derived from source_main when omitted
     detect:
       fps: 5
       threshold: 0.5
