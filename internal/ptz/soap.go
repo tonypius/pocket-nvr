@@ -66,6 +66,11 @@ func wsseHeader(user, pass string, nonce []byte, created time.Time) string {
 		`</wsse:UsernameToken></wsse:Security>`
 }
 
+// noRedirect is the CheckRedirect for every ONVIF http.Client: a camera must
+// not be able to bounce the SOAP POST (which carries the WSSE digest) to
+// another host. The 3xx response is returned as is and reported as an error.
+func noRedirect(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+
 // soapClient is a minimal SOAP 1.2 client with WS-Security UsernameToken auth.
 type soapClient struct {
 	deviceURL string
@@ -84,7 +89,7 @@ func newSoap(deviceURL, user, pass string, hc *http.Client) *soapClient {
 	if hc == nil {
 		// Never fall back to http.DefaultClient: it has no timeout, so a
 		// camera that accepts a connection but never replies would hang us.
-		hc = &http.Client{Timeout: defaultHTTPTimeout}
+		hc = &http.Client{Timeout: defaultHTTPTimeout, CheckRedirect: noRedirect}
 	}
 	return &soapClient{deviceURL: deviceURL, user: user, pass: pass, hc: hc}
 }

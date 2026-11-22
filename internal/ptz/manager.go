@@ -76,7 +76,7 @@ func NewManager(logger *slog.Logger) *Manager {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	return &Manager{
 		log:            logger,
-		hc:             &http.Client{Transport: tr, Timeout: defaultHTTPTimeout},
+		hc:             &http.Client{Transport: tr, Timeout: defaultHTTPTimeout, CheckRedirect: noRedirect},
 		probeTimeout:   defaultProbeTimeout,
 		cmdTimeout:     defaultCommandTimeout,
 		maxMove:        defaultMaxMove,

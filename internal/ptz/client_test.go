@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"net"
+	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -257,5 +259,33 @@ func TestDialWithExpiredContextReturnsPromptly(t *testing.T) {
 	}
 	if d := time.Since(start); d > time.Second {
 		t.Errorf("Dial took %v with a done context", d)
+	}
+}
+
+// redirector returns a camera URL that answers every request with a 307 to a
+// second server, and the counter of requests that second server received.
+func redirector(t *testing.T) (string, *atomic.Int64) {
+	t.Helper()
+	var hits atomic.Int64
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		http.Error(w, "should not be reached", http.StatusTeapot)
+	}))
+	t.Cleanup(target.Close)
+	redir := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL+"/elsewhere", http.StatusTemporaryRedirect)
+	}))
+	t.Cleanup(redir.Close)
+	return redir.URL + "/onvif/device_service", &hits
+}
+
+func TestDialDefaultClientDoesNotFollowRedirects(t *testing.T) {
+	url, hits := redirector(t)
+	c, err := Dial(testCtx(t), Target{Endpoints: []string{url}, User: "u", Pass: "p"}, nil)
+	if err == nil || c != nil {
+		t.Fatalf("Dial = %v, %v; want nil client and an error", c, err)
+	}
+	if n := hits.Load(); n != 0 {
+		t.Errorf("redirect target received %d requests; the SOAP POST (with its WSSE digest) must not be bounced", n)
 	}
 }

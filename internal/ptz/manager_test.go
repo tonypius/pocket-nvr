@@ -629,3 +629,15 @@ func TestCommandsSerialisedAcrossReset(t *testing.T) {
 		t.Errorf("Stops = %d (was %d when the fresh Move was accepted), want 1 and unchanged", got, stopsAtAccept)
 	}
 }
+
+func TestManagerDoesNotFollowRedirects(t *testing.T) {
+	url, hits := redirector(t)
+	cam := config.Camera{ID: "redir", SourceMain: "rtsp://u:p@127.0.0.1/x", OnvifURL: url}
+	m := newManager(t, time.Second)
+	if _, err := m.Caps(context.Background(), cam); err == nil {
+		t.Error("Caps err = nil, want a failure for a redirecting camera")
+	}
+	if n := hits.Load(); n != 0 {
+		t.Errorf("redirect target received %d requests; the manager's client must not follow redirects", n)
+	}
+}
