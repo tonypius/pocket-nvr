@@ -3,6 +3,7 @@
 #include "event_state.h"
 #include "frame_queue.h"
 #include "motion_gate.h"
+#include "silence_feeder.h"
 #include "zones.h"
 
 #include <cassert>
@@ -126,6 +127,45 @@ static void testEventStateMachine() {
 	CHECK(!sm.active());
 }
 
+static void testSilenceFeederClosesEventUnderBusyQueue() {
+	// Regression (soak-local-4cam-1h): camera 0 has an open event but its gate
+	// is silent, while cameras 1-3 keep the shared queue busy (a frame every
+	// ~50 ms, so the queue is never idle for a Pop timeout). The event must
+	// still close, driven by the clock rather than queue idleness.
+	const int fps = 5;
+	SilenceFeeder feeder(4);
+	EventStateMachine sm(1, 8);
+	float bbox[4] = {10, 20, 30, 40};
+	int64_t t = 10000;
+	CHECK(sm.OnFrame(true, 0.8f, bbox, t) == EventSignal::Entered);
+	feeder.OnFrame(0, t); // last real frame from camera 0
+
+	bool exited = false;
+	int64_t exitAt = 0;
+	for (int64_t now = t; now <= t + 5000 && !exited; now += 10) {
+		// busy cameras: one frame every 50 ms, rotating over slots 1..3
+		if ((now - t) % 50 == 0) feeder.OnFrame(size_t(1 + ((now - t) / 50) % 3), now);
+		if (sm.active() && feeder.Due(0, now, fps)) {
+			if (sm.OnFrame(false, 0, bbox, now) == EventSignal::Exited) {
+				exited = true;
+				exitAt = now;
+			}
+		}
+	}
+	CHECK(exited);
+	// 8 negatives at one per 200 ms interval, first one an interval after t.
+	CHECK(exitAt - t >= 8 * 200 && exitAt - t <= 8 * 200 + 400);
+
+	// A camera that keeps delivering frames is never fed negatives.
+	SilenceFeeder live(1);
+	int fed = 0;
+	for (int64_t now = 0; now <= 2000; now += 10) {
+		if (now % 200 == 0) live.OnFrame(0, now);
+		if (live.Due(0, now, fps)) ++fed;
+	}
+	CHECK(fed == 0);
+}
+
 static void testFrameQueue() {
 	// Drop-oldest under overflow (FR-DET-5): newest frames win, count bounded.
 	FrameQueue q(4);
@@ -191,6 +231,7 @@ int main() {
 	testMotionGate();
 	testZones();
 	testEventStateMachine();
+	testSilenceFeederClosesEventUnderBusyQueue();
 	testFrameQueue();
 	testMockBackend();
 	if (failures == 0) {

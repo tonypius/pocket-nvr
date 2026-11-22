@@ -11,6 +11,7 @@
 #include "frame_queue.h"
 #include "governor.h"
 #include "http_post.h"
+#include "silence_feeder.h"
 #include "snapshot.h"
 #include "zones.h"
 
@@ -126,8 +127,7 @@ int main(int argc, char** argv) {
 		};
 		std::vector<Peak> peak(cams.size());
 		std::vector<std::string> zoneHit(cams.size());
-		std::vector<int64_t> lastFrameMs(cams.size(), 0);
-		std::vector<int64_t> lastSampleMs(cams.size(), 0);
+		nvr::SilenceFeeder silence(cams.size());
 
 		auto emitEvent = [&](size_t slot) {
 			auto& sm = machines[slot];
@@ -176,31 +176,32 @@ bool ok = nvr::httpPost(api_host, api_port,
 			pk.frame.data.clear();
 		};
 
+		// Gate silence → implicit negatives (FR-DET-7): a still scene never
+		// passes the motion gate, so no frames carry the "no person" samples
+		// the state machine needs to close an event. Feed one negative per
+		// camera frame interval while that camera is silent and its event is
+		// open. Runs every iteration, clock-driven: with several cameras the
+		// queue is rarely idle, so an idle-only feeder starved and events
+		// never closed (soak-local-4cam-1h/NOTES.md).
+		auto feedSilence = [&](int64_t now) {
+			for (size_t i = 0; i < cams.size(); ++i) {
+				if (!machines[i].active()) continue;
+				if (!silence.Due(i, now, cams[i].fps)) continue;
+				float zero[4] = {0, 0, 0, 0};
+				if (machines[i].OnFrame(false, 0, zero, now) ==
+					nvr::EventSignal::Exited)
+					emitEvent(i);
+			}
+		};
+
 		while (g_running) {
 			nvr::Frame f;
-			if (!queue.Pop(f, 200)) {
-				// Gate silence → implicit negatives (FR-DET-7): a still scene
-				// never passes the motion gate, so no frames carry the "no
-				// person" samples the state machine needs to close an event.
-				// Feed negatives at the camera's own fps while it is open.
-				int64_t now = nowMs();
-				for (size_t i = 0; i < cams.size(); ++i) {
-					if (!machines[i].active()) continue;
-					int64_t interval = 1000 / std::max(1, cams[i].fps);
-					if (now - lastFrameMs[i] > interval &&
-						now - lastSampleMs[i] >= interval) {
-						lastSampleMs[i] = now;
-						float zero[4] = {0, 0, 0, 0};
-						if (machines[i].OnFrame(false, 0, zero, now) ==
-							nvr::EventSignal::Exited)
-							emitEvent(i);
-					}
-				}
-				continue;
-			}
+			// Short timeout bounds feeder latency when the queue is idle.
+			bool got = queue.Pop(f, 50);
+			if (got) silence.OnFrame(size_t(f.camera_slot), nowMs());
+			feedSilence(nowMs());
+			if (!got) continue;
 			size_t slot = size_t(f.camera_slot);
-			lastFrameMs[slot] = f.ts_ms;
-			lastSampleMs[slot] = f.ts_ms;
 			auto dets = backend->Infer(f);
 			static std::atomic<uint64_t> dbgN{0};
 			if (getenv("NVRDET_DEBUG") && dbgN.fetch_add(1) % 20 == 0) {
