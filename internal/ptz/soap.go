@@ -31,6 +31,11 @@ const (
 	clockSyncTimeout   = 5 * time.Second
 )
 
+// ErrUnauthorized is returned (wrapped) when the device answers a request with
+// a plain HTTP 401 instead of a SOAP Fault. The message carries no URL or
+// credentials.
+var ErrUnauthorized = errors.New("soap: HTTP 401 unauthorized")
+
 // Fault is a SOAP Fault returned by the device.
 type Fault struct{ Code, Reason string }
 
@@ -228,6 +233,9 @@ func (s *soapClient) do(ctx context.Context, url, bodyXML string, out any, auth 
 			fault.Reason = strings.TrimSpace(f.FaultString)
 		}
 		return fault
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		return ErrUnauthorized
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("soap: unexpected HTTP status %d", resp.StatusCode)

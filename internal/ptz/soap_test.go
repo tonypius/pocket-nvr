@@ -228,3 +228,20 @@ func TestNilHTTPClientHasTimeout(t *testing.T) {
 		t.Fatalf("nil hc must default to a client with a timeout, got %+v", s.hc)
 	}
 }
+
+func TestHTTP401IsErrUnauthorizedWithoutLeaks(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "go away", http.StatusUnauthorized)
+	}))
+	t.Cleanup(srv.Close)
+	sc := newSoap(srv.URL+"/onvif/device_service", "alice", "hunter2", nil)
+	err := sc.call(context.Background(), srv.URL+"/onvif/device_service", getDeviceInfoBody, nil)
+	if !errors.Is(err, ErrUnauthorized) {
+		t.Fatalf("err = %v, want ErrUnauthorized", err)
+	}
+	for _, leak := range []string{"hunter2", "alice", srv.URL, "127.0.0.1"} {
+		if strings.Contains(err.Error(), leak) {
+			t.Errorf("error leaks %q: %v", leak, err)
+		}
+	}
+}

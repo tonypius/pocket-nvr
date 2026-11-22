@@ -25,6 +25,10 @@ const (
 	defaultMaxMove        = 3 * time.Second
 	defaultCapsTTL        = 10 * time.Minute
 	defaultFailureTTL     = time.Minute
+	// defaultAuthFailureTTL is how long a rejected login is remembered. It is
+	// long on purpose: some firmware locks the account or source IP after a few
+	// failed logins, which could take recording down with it.
+	defaultAuthFailureTTL = 30 * time.Minute
 	defaultStopRetryDelay = 500 * time.Millisecond
 
 	// maxStopAttempts bounds how often the safety timer tries to deliver a
@@ -54,6 +58,7 @@ type Manager struct {
 	maxMove        time.Duration // how long a Move lasts without being renewed
 	capsTTL        time.Duration // how long a successful probe is trusted
 	failureTTL     time.Duration // how long a failed probe is remembered
+	authFailureTTL time.Duration // how long a probe rejected for credentials is remembered
 	stopRetryDelay time.Duration // delay before re-sending a failed safety Stop
 
 	wg sync.WaitGroup // pending safety timers and background work
@@ -82,6 +87,7 @@ func NewManager(logger *slog.Logger) *Manager {
 		maxMove:        defaultMaxMove,
 		capsTTL:        defaultCapsTTL,
 		failureTTL:     defaultFailureTTL,
+		authFailureTTL: defaultAuthFailureTTL,
 		stopRetryDelay: defaultStopRetryDelay,
 		entries:        map[string]*entry{},
 		locks:          map[string]chan struct{}{},
@@ -212,7 +218,13 @@ func (m *Manager) startProbeLocked(e *entry) *probeCall {
 		if !e.dead && !errors.Is(err, context.Canceled) {
 			o := &outcome{caps: pc.caps, err: pc.err, until: time.Now().Add(m.capsTTL)}
 			if err != nil {
-				o.until = time.Now().Add(m.failureTTL)
+				// A rejected login is remembered for long: retrying it
+				// every failure TTL could get the account or IP locked out.
+				ttl := m.failureTTL
+				if isAuthFailure(err) {
+					ttl = m.authFailureTTL
+				}
+				o.until = time.Now().Add(ttl)
 			} else {
 				e.client = pc.client
 			}
@@ -287,7 +299,8 @@ func (m *Manager) CapsCached(cam config.Camera) (Caps, bool) {
 // Caps returns the camera's capabilities, probing it if nothing fresh is
 // cached. A probe in flight is shared. It blocks for at most the probe
 // timeout (or until ctx ends); on failure it returns Caps{} and the error,
-// and the failure is cached for the failure TTL. A camera that answers but
+// and the failure is cached for the failure TTL (or, when the camera rejected
+// our login, for the much longer auth failure TTL, until Reset). A camera that answers but
 // has no PTZ yields empty Caps and a nil error.
 func (m *Manager) Caps(ctx context.Context, cam config.Camera) (Caps, error) {
 	_, _, caps, err := m.resolve(ctx, cam)

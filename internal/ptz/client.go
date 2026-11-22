@@ -269,3 +269,40 @@ func (c *Client) Stop(ctx context.Context) error {
 		`<tptz:PanTilt>true</tptz:PanTilt><tptz:Zoom>true</tptz:Zoom></tptz:Stop>`
 	return c.sc.call(ctx, c.ptzURL, body, nil)
 }
+
+// authMarkers are the (lower-case) fragments of a SOAP Fault code or reason
+// that mean the camera rejected our credentials.
+var authMarkers = []string{"notauthorized", "not authorized", "sender not authorized", "failedauthentication", "authentication"}
+
+// isAuthFailure reports whether err says the camera rejected our credentials:
+// a plain HTTP 401 (ErrUnauthorized) or an auth-ish SOAP Fault. Dial joins one
+// error per endpoint, so the whole error tree is searched: a camera that
+// rejected the login on any endpoint counts, whatever the others said.
+func isAuthFailure(err error) bool {
+	switch e := err.(type) {
+	case nil:
+		return false
+	case *Fault:
+		text := strings.ToLower(e.Code + " " + e.Reason)
+		for _, m := range authMarkers {
+			if strings.Contains(text, m) {
+				return true
+			}
+		}
+		return false
+	}
+	if errors.Is(err, ErrUnauthorized) {
+		return true
+	}
+	switch e := err.(type) {
+	case interface{ Unwrap() error }:
+		return isAuthFailure(e.Unwrap())
+	case interface{ Unwrap() []error }:
+		for _, sub := range e.Unwrap() {
+			if isAuthFailure(sub) {
+				return true
+			}
+		}
+	}
+	return false
+}

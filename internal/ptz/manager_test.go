@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -639,5 +640,162 @@ func TestManagerDoesNotFollowRedirects(t *testing.T) {
 	}
 	if n := hits.Load(); n != 0 {
 		t.Errorf("redirect target received %d requests; the manager's client must not follow redirects", n)
+	}
+}
+
+// authTestCam is a camera whose password does not match the fake's.
+func wrongPasswordCam(t *testing.T) (config.Camera, *ptztest.Camera) {
+	t.Helper()
+	fake := ptzFake(t)
+	cam := camFor(fake)
+	cam.SourceMain = "rtsp://u:wrong@127.0.0.1/x"
+	return cam, fake
+}
+
+// status401Server answers every request with a bare HTTP 401 and counts them.
+func status401Server(t *testing.T) (config.Camera, *atomic.Int64) {
+	t.Helper()
+	var n atomic.Int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n.Add(1)
+		w.Header().Set("WWW-Authenticate", `Digest realm="cam"`)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}))
+	t.Cleanup(srv.Close)
+	return config.Camera{ID: "u401", SourceMain: "rtsp://u:p@127.0.0.1/x", OnvifURL: srv.URL + "/onvif/device_service"}, &n
+}
+
+// resettingListener accepts connections and closes them at once, counting
+// them: an unreachable-looking camera whose failures are not auth failures.
+func resettingListener(t *testing.T) (config.Camera, *atomic.Int64) {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n atomic.Int64
+	go func() {
+		for {
+			c, err := l.Accept()
+			if err != nil {
+				return
+			}
+			n.Add(1)
+			c.Close()
+		}
+	}()
+	t.Cleanup(func() { l.Close() })
+	return config.Camera{ID: "rst", SourceMain: "rtsp://u:p@127.0.0.1/x", OnvifURL: "http://" + l.Addr().String() + "/onvif/device_service"}, &n
+}
+
+// checkAuthFailureCachedUntilReset drives the common expectations: after the
+// failure TTL (shrunk to 50ms) a camera that rejected our login is NOT probed
+// again, CapsCached reports a known failure and starts nothing, and Reset
+// makes the next lookup probe again.
+func checkAuthFailureCachedUntilReset(t *testing.T, cam config.Camera, requests func() int64) {
+	t.Helper()
+	m := newManager(t, time.Second)
+	m.failureTTL = 50 * time.Millisecond
+	if _, err := m.Caps(context.Background(), cam); err == nil {
+		t.Fatal("first Caps err = nil, want an auth failure")
+	}
+	first := requests()
+	if first == 0 {
+		t.Fatal("expected the first probe to reach the camera")
+	}
+	time.Sleep(300 * time.Millisecond) // well past the (shrunk) failure TTL
+
+	if caps, ok := m.CapsCached(cam); !ok || caps != (Caps{}) {
+		t.Errorf("CapsCached = %+v, %v; want empty, true (known auth failure)", caps, ok)
+	}
+	if _, err := m.Caps(context.Background(), cam); err == nil {
+		t.Error("Caps err = nil, want the cached auth failure")
+	}
+	if err := m.Move(context.Background(), cam, Up); err == nil {
+		t.Error("Move err = nil, want the cached auth failure")
+	}
+	time.Sleep(100 * time.Millisecond) // a wrongly started background probe would have landed by now
+	if got := requests(); got != first {
+		t.Errorf("requests %d -> %d: an auth failure was retried after the failure TTL", first, got)
+	}
+
+	m.Reset()
+	if _, err := m.Caps(context.Background(), cam); err == nil {
+		t.Error("Caps after Reset err = nil, want an auth failure again")
+	}
+	if got := requests(); got <= first {
+		t.Errorf("requests stayed at %d after Reset: the camera was not probed again", got)
+	}
+}
+
+func TestAuthFailureIsCachedUntilReset(t *testing.T) {
+	cam, fake := wrongPasswordCam(t)
+	checkAuthFailureCachedUntilReset(t, cam, func() int64 { return int64(fake.Requests()) })
+}
+
+func TestHTTP401IsCachedAsAuthFailure(t *testing.T) {
+	cam, n := status401Server(t)
+	checkAuthFailureCachedUntilReset(t, cam, n.Load)
+}
+
+func TestAuthFailureExpiresAfterAuthFailureTTL(t *testing.T) {
+	cam, fake := wrongPasswordCam(t)
+	m := newManager(t, time.Second)
+	m.failureTTL = 20 * time.Millisecond
+	m.authFailureTTL = 300 * time.Millisecond
+	if _, err := m.Caps(context.Background(), cam); err == nil {
+		t.Fatal("Caps err = nil, want an auth failure")
+	}
+	first := fake.Requests()
+	eventually(t, "the auth failure TTL to expire and the camera to be probed again", func() bool {
+		_, _ = m.Caps(context.Background(), cam)
+		return fake.Requests() > first
+	})
+}
+
+func TestNonAuthFailureIsRetriedAfterFailureTTL(t *testing.T) {
+	cam, n := resettingListener(t)
+	m := newManager(t, time.Second)
+	m.failureTTL = 50 * time.Millisecond
+	if _, err := m.Caps(context.Background(), cam); err == nil {
+		t.Fatal("Caps err = nil, want a failure")
+	}
+	first := n.Load()
+	if first == 0 {
+		t.Fatal("expected the probe to reach the listener")
+	}
+	eventually(t, "the failure TTL to expire and the camera to be probed again", func() bool {
+		_, _ = m.Caps(context.Background(), cam)
+		return n.Load() > first
+	})
+}
+
+func TestIsAuthFailure(t *testing.T) {
+	yes := []error{
+		ErrUnauthorized,
+		fmt.Errorf("ctx: %w", ErrUnauthorized),
+		&Fault{Code: "ter:NotAuthorized", Reason: "x"},
+		&Fault{Code: "s:Sender", Reason: "Sender not authorized"},
+		&Fault{Code: "ter:FailedAuthentication"},
+		&Fault{Reason: "Authentication failed"},
+		&Fault{Code: "ter:NOTAUTHORIZED"},
+		errors.Join(errors.New("conn refused"), fmt.Errorf("ep: %w", &Fault{Code: "ter:NotAuthorized"})),
+		fmt.Errorf("ptz: no endpoint: %w", errors.Join(fmt.Errorf("a: %w", ErrUnauthorized), errors.New("b"))),
+	}
+	for _, err := range yes {
+		if !isAuthFailure(err) {
+			t.Errorf("isAuthFailure(%v) = false, want true", err)
+		}
+	}
+	no := []error{
+		nil,
+		errors.New("soap: unexpected HTTP status 500"),
+		&Fault{Code: "ter:NoProfile", Reason: "no such profile"},
+		context.DeadlineExceeded,
+	}
+	for _, err := range no {
+		if isAuthFailure(err) {
+			t.Errorf("isAuthFailure(%v) = true, want false", err)
+		}
 	}
 }
