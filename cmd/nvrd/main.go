@@ -29,6 +29,9 @@ import (
 	"pocketnvr/internal/store"
 )
 
+// muteSettingKey stores the global alert mute (see api.SetMute).
+const muteSettingKey = "notify_mute_until"
+
 func main() {
 	var (
 		cfgDir      = flag.String("config", envOr("NVR_CONFIG_DIR", defaultConfigDir()), "directory containing config.yaml and secrets.yaml")
@@ -113,6 +116,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Web Push needs a VAPID key pair; create it on first run. Failure only
+	// disables push, it must not stop the NVR.
+	if withKeys, err := notify.EnsureVAPID(filepath.Join(*cfgDir, "secrets.yaml"), secrets); err != nil {
+		logger.Warn("web push disabled: could not create VAPID keys", "err", err)
+	} else {
+		secrets = withKeys
+	}
+
 	// Live config/secrets for background goroutines. The SIGHUP reload swaps
 	// these atomically; goroutines used to read the plain `cfg`/`secrets`
 	// variables directly (a data race), and secrets were never re-read, so a
@@ -133,10 +144,10 @@ func main() {
 	// COMP-5 + FR-EVT-3: detector events → notifications + clip extraction.
 	notifier := notify.New(getCfg, secret, st, logger)
 	extractor := clips.New(getCfg, st, logger, ffmpegPath())
-	srv.SetEventHandler(func(cameraID, cameraName string, eventID, startTS, endTS int64, score float64, snapshot []byte) {
+	srv.SetEventHandler(func(cameraID, cameraName, label string, eventID, startTS, endTS int64, score float64, snapshot []byte) {
 		link := deepLink(getCfg(), secret("api_token"), eventID)
 		delivered, why := notifier.Enqueue(notify.Item{
-			EventID: eventID, CameraID: cameraID, Camera: cameraName,
+			EventID: eventID, CameraID: cameraID, Camera: cameraName, Label: label,
 			Score: score, StartTS: startTS, Snapshot: snapshot, DeepLink: link,
 		})
 		logger.Info("notification queued", "event", eventID, "delivered", delivered, "reason", why)
@@ -145,6 +156,21 @@ func main() {
 				StartTS: startTS, EndTS: endTS})
 		}
 	})
+	notifier.SetPushStore(st)
+	// global alert mute survives restarts (stored in the settings table)
+	if v, ok, err := st.GetSetting(muteSettingKey); err == nil && ok {
+		if ms, perr := strconv.ParseInt(v, 10, 64); perr == nil {
+			notifier.SetMuteUntil(ms)
+		}
+	}
+	srv.SetMute(notifier.MuteUntil, func(ms int64) error {
+		if err := st.SetSetting(muteSettingKey, strconv.FormatInt(ms, 10)); err != nil {
+			return err
+		}
+		notifier.SetMuteUntil(ms)
+		return nil
+	})
+	srv.SetPush(func() string { return secret("vapid_public") }, notifier.PushTest)
 	srv.SetMtxProbe(mtxProbe(cfg.Media.RTSPAddress))
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -170,7 +196,7 @@ func main() {
 				}
 			}
 			notifier.Enqueue(notify.Item{
-				EventID: e.ID, CameraID: e.CameraID, Camera: cameraName,
+				EventID: e.ID, CameraID: e.CameraID, Camera: cameraName, Label: e.Label,
 				Score: e.Score, StartTS: e.StartTS,
 				DeepLink: deepLink(getCfg(), secret("api_token"), e.ID),
 			})

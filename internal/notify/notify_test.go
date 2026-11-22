@@ -205,3 +205,104 @@ func waitFor(t *testing.T, cond func() bool, d time.Duration) {
 }
 
 var _ = json.Marshal // keep import if assertions change
+
+func TestOnlyPeopleNotifyByDefault(t *testing.T) {
+	s, st := newService(t, testCfg(), "http://unused")
+	for _, label := range []string{"cat", "dog", "car", "motion"} {
+		it := item(100)
+		it.Label = label
+		it.CameraID = "cam-" + label
+		if ok, why := s.Enqueue(it); ok || !strings.Contains(why, "label not notified") {
+			t.Fatalf("%s must not notify: ok=%v why=%q", label, ok, why)
+		}
+	}
+	if len(s.q) != 0 {
+		t.Fatalf("non-person events must never reach the delivery queue, queued=%d", len(s.q))
+	}
+	if !st.marked(100) {
+		t.Fatal("suppressed events are marked so they are not replayed after a restart")
+	}
+	// person and an empty label (store default) alert
+	p := item(1)
+	p.Label = "person"
+	p.CameraID = "cam-a"
+	if ok, why := s.Enqueue(p); !ok {
+		t.Fatalf("person should notify: %q", why)
+	}
+	s2, _ := newService(t, testCfg(), "http://unused") // fresh global min-gap
+	e := item(2)
+	e.CameraID = "cam-b"
+	if ok, why := s2.Enqueue(e); !ok {
+		t.Fatalf("empty label means person: %q", why)
+	}
+}
+
+func TestNotifyLabelsConfigurable(t *testing.T) {
+	cfg := testCfg()
+	cfg.Notifications.Labels = []string{"person", "dog"}
+	s, _ := newService(t, cfg, "http://unused")
+	d := item(1)
+	d.Label = "dog"
+	if ok, why := s.Enqueue(d); !ok {
+		t.Fatalf("dog is listed, should notify: %q", why)
+	}
+	c := item(2)
+	c.Label = "cat"
+	c.CameraID = "cam2"
+	if ok, _ := s.Enqueue(c); ok {
+		t.Fatal("cat is not listed")
+	}
+}
+
+func TestMuteSilencesAlerts(t *testing.T) {
+	s, st := newService(t, testCfg(), "http://unused")
+	now := s.nowFn()
+
+	if s.Muted(now) {
+		t.Fatal("not muted by default")
+	}
+	s.SetMuteUntil(now.Add(time.Hour).UnixMilli())
+	if !s.Muted(now) {
+		t.Fatal("should be muted for the next hour")
+	}
+	it := item(5)
+	it.Label = "person"
+	if ok, why := s.Enqueue(it); ok || why != "alerts muted" {
+		t.Fatalf("muted person event: ok=%v why=%q", ok, why)
+	}
+	if !st.marked(5) || len(s.q) != 0 {
+		t.Fatal("muted events are stored+marked, not queued")
+	}
+	// a muted event must not burn the camera cooldown for later real alerts
+	s.SetMuteUntil(0)
+	it2 := item(6)
+	it2.Label = "person"
+	if ok, why := s.Enqueue(it2); !ok {
+		t.Fatalf("after unmute the same camera should alert immediately: %q", why)
+	}
+
+	// timed mute expires by itself
+	s.SetMuteUntil(now.Add(-time.Minute).UnixMilli())
+	if s.Muted(now) {
+		t.Fatal("an expired snooze must not mute")
+	}
+	// -1 = until switched back on
+	s.SetMuteUntil(-1)
+	if !s.Muted(now.Add(1000 * time.Hour)) {
+		t.Fatal("-1 mutes indefinitely")
+	}
+}
+
+func TestCaptionNamesTheLabel(t *testing.T) {
+	it := item(1)
+	if c := caption(it); !strings.Contains(c, "person detected") {
+		t.Fatalf("empty label reads as person: %q", c)
+	}
+	it.Label = "dog"
+	if c := caption(it); !strings.Contains(c, "dog detected") || strings.Contains(c, "person") {
+		t.Fatalf("caption must name the real label: %q", c)
+	}
+	if b := payloadFor(it).Body; !strings.HasPrefix(b, "Dog detected") {
+		t.Fatalf("push body: %q", b)
+	}
+}

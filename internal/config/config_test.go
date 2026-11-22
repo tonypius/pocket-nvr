@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func writeFiles(t *testing.T, config, secrets string) string {
@@ -154,5 +156,63 @@ func TestMissingSecrets(t *testing.T) {
 	}
 	if m := c.MissingSecrets(map[string]string{"u": "1", "p": "2", "zz": "3"}); len(m) != 0 {
 		t.Fatalf("all defined, want none, got %v", m)
+	}
+}
+
+func TestNotifyLabelDefaultsAndNormalisation(t *testing.T) {
+	var n Notifications
+	if !n.NotifyLabel("person") || !n.NotifyLabel("") || !n.NotifyLabel(" Person ") {
+		t.Fatal("people (and empty label) notify by default")
+	}
+	for _, l := range []string{"cat", "dog", "car", "motion"} {
+		if n.NotifyLabel(l) {
+			t.Fatalf("%s must not notify by default", l)
+		}
+	}
+	n.Labels = []string{"person", "dog"}
+	if !n.NotifyLabel("DOG") || n.NotifyLabel("cat") {
+		t.Fatal("configured labels apply case-insensitively")
+	}
+
+	c := &Config{Notifications: Notifications{Labels: []string{" Person ", "DOG", "dog", ""}}}
+	c.applyDefaults()
+	if got := strings.Join(c.Notifications.Labels, ","); got != "person,dog" {
+		t.Fatalf("labels should be trimmed, lowercased and de-duplicated, got %q", got)
+	}
+	empty := &Config{}
+	empty.applyDefaults()
+	if got := strings.Join(empty.Notifications.Labels, ","); got != "person" {
+		t.Fatalf("default labels = %q, want person", got)
+	}
+}
+
+func TestNotificationLabelsRoundTripYAML(t *testing.T) {
+	in := Notifications{Provider: "ntfy", CooldownSeconds: 60, Labels: []string{"person", "dog"}}
+	b, err := yaml.Marshal(in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out Notifications
+	if err := yaml.Unmarshal(b, &out); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(out.Labels, ",") != "person,dog" {
+		t.Fatalf("labels lost in yaml round trip: %s", b)
+	}
+}
+
+// Regression: MissingSecrets only reports — it must never rewrite the config.
+// It once returned the string remainder from its walker, which stripped
+// "rtsp://${secret:u}:${secret:p}" off every camera URL it inspected, and a
+// Settings save then wrote the damaged URLs to config.yaml.
+func TestMissingSecretsDoesNotMutate(t *testing.T) {
+	const main = "rtsp://${secret:u}:${secret:p}@10.0.0.1:554/ch0_0.264"
+	const sub = "rtsp://${secret:u}:${secret:p}@10.0.0.1:554/ch0_1.264"
+	c := &Config{Cameras: []Camera{{ID: "a", SourceMain: main, SourceSub: sub}}}
+	_ = c.MissingSecrets(map[string]string{"u": "x"})
+	_ = c.MissingSecrets(map[string]string{"u": "x", "p": "y"})
+	if c.Cameras[0].SourceMain != main || c.Cameras[0].SourceSub != sub {
+		t.Fatalf("MissingSecrets rewrote the config: main=%q sub=%q",
+			c.Cameras[0].SourceMain, c.Cameras[0].SourceSub)
 	}
 }

@@ -86,6 +86,18 @@ CREATE TABLE IF NOT EXISTS events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_cam_time ON events(camera_id, start_ts);
 CREATE INDEX IF NOT EXISTS idx_events_time ON events(start_ts);
+CREATE TABLE IF NOT EXISTS settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint   TEXT PRIMARY KEY,
+  p256dh     TEXT NOT NULL,
+  auth       TEXT NOT NULL,
+  user_agent TEXT NOT NULL DEFAULT '',
+  created_at INTEGER NOT NULL,
+  last_ok_at INTEGER
+);
 `
 	if _, err := s.db.Exec(schema); err != nil {
 		return err

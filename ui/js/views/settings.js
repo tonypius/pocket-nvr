@@ -1,6 +1,7 @@
 // views/settings.js — camera editors, network scan, recording/detection/
 // notification fields, write-only secrets editor, save & apply (FR-API-4).
 import { api, esc, el, getToken, $, $$ } from "../api.js";
+import { pushState, enablePush, disablePush, sendTestPush } from "../push.js";
 
 let cfg = null;
 let camList = [];
@@ -25,6 +26,8 @@ export async function mount(page) {
     <h3 class="sec">Recording</h3><div id="cfg-recording" class="kv"></div>
     <h3 class="sec">Detection</h3><div id="cfg-detection" class="kv"></div>
     <h3 class="sec">Notifications</h3><div id="cfg-notify" class="kv"></div>
+    <h3 class="sec">Push notifications <small>(this device)</small></h3>
+    <div id="cfg-push"></div>
     <h3 class="sec">Secrets <small>(write-only — type key + value)</small></h3>
     <div id="cfg-secrets"></div>
     <button id="add-secret" class="ghost">+ add secret</button>
@@ -48,12 +51,15 @@ export async function mount(page) {
   ]);
   kv("#cfg-notify", page, [
     ["provider (ntfy|telegram|both)", () => cfg.notifications.provider, (v) => cfg.notifications.provider = v],
+    ["notify for (detection classes, comma-separated)", () => (cfg.notifications.labels || ["person"]).join(", "),
+      (v) => cfg.notifications.labels = v.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean)],
     ["cooldown_seconds", () => cfg.notifications.cooldown_seconds, (v) => cfg.notifications.cooldown_seconds = num(v)],
     ["base_url (deep links)", () => cfg.notifications.base_url, (v) => cfg.notifications.base_url = v],
     ["quiet start (HH:MM)", () => cfg.notifications.quiet_hours_start, (v) => cfg.notifications.quiet_hours_start = v],
     ["quiet end (HH:MM)", () => cfg.notifications.quiet_hours_end, (v) => cfg.notifications.quiet_hours_end = v],
   ]);
 
+  renderPush(page);
   $("#scan-btn", page).addEventListener("click", () => scan(page));
   $("#add-camera", page).addEventListener("click", addCamera);
   $("#add-secret", page).addEventListener("click", () => addSecretRow("", ""));
@@ -193,4 +199,44 @@ async function saveAll(page) {
     st.textContent = "saved ✓ — applying";
     setTimeout(() => location.reload(), 1500);
   } catch (e) { st.textContent = "save failed: " + e.message; }
+}
+
+// ---- Web Push (event alerts to this device) ----
+const PUSH_TEXT = {
+  unsupported: "This browser doesn't support push notifications.",
+  install: "On iPhone/iPad, add PocketNVR to the Home Screen (Share → Add to Home Screen), then open it from there to enable notifications.",
+  blocked: "Notifications are blocked for this site. Allow them in the browser or phone settings, then reload.",
+  "server-off": "Push isn't available on the server yet.",
+  off: "Off. Turn on to get a notification here when a camera detects something.",
+  on: "On — this device gets an alert for each event.",
+};
+
+async function renderPush(page) {
+  const box = $("#cfg-push", page);
+  if (!box) return;
+  box.innerHTML = "<p class='hint'>checking…</p>";
+  let st;
+  try { st = await pushState(); } catch (e) { st = { kind: "unsupported" }; }
+  const devices = st.devices != null ? ` <small>${st.devices} device(s) registered</small>` : "";
+  box.innerHTML = `<p id="push-msg">${esc(PUSH_TEXT[st.kind] || "")}${devices}</p><div class="scanbar" id="push-btns"></div>`;
+  const btns = $("#push-btns", box);
+  const msg = $("#push-msg", box);
+  const act = (label, cls, fn) => {
+    const b = el("button", cls, esc(label));
+    b.addEventListener("click", async () => {
+      b.disabled = true;
+      try { await fn(msg); await renderPush(page); }
+      catch (e) { msg.textContent = String(e.message || e); b.disabled = false; }
+    });
+    btns.appendChild(b);
+  };
+  if (st.kind === "off") act("Enable notifications", "primary", () => enablePush());
+  if (st.kind === "on") {
+    act("Send test", "ghost", async (m) => {
+      m.textContent = "sending…";
+      const n = await sendTestPush();
+      throw new Error(n ? `Test sent to ${n} device(s).` : "No device accepted the test.");
+    });
+    act("Turn off", "ghost", () => disablePush());
+  }
 }

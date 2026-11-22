@@ -111,15 +111,39 @@ type Notifications struct {
 	BaseURL             string `yaml:"base_url" json:"base_url"`                             // reachable UI origin for deep links (FR-NOT-2)
 	QuietStart          string `yaml:"quiet_hours.start" json:"quiet_hours_start"`
 	QuietEnd            string `yaml:"quiet_hours.end" json:"quiet_hours_end"`
+	// Labels lists the detection classes that trigger a notification
+	// (default: person only). Other events are still detected and stored;
+	// they just don't alert.
+	Labels []string `yaml:"labels" json:"labels"`
+}
+
+// NotifyLabel reports whether an event with this label should notify. An
+// empty label counts as "person" (the store's default).
+func (n Notifications) NotifyLabel(label string) bool {
+	label = strings.ToLower(strings.TrimSpace(label))
+	if label == "" {
+		label = "person"
+	}
+	labels := n.Labels
+	if len(labels) == 0 {
+		labels = []string{"person"}
+	}
+	for _, l := range labels {
+		if l == label {
+			return true
+		}
+	}
+	return false
 }
 
 // Custom unmarshal for the inline quiet_hours mapping.
 func (n *Notifications) UnmarshalYAML(value *yaml.Node) error {
 	var raw struct {
-		Provider            string `yaml:"provider" json:"provider"`
-		CooldownSeconds     int    `yaml:"cooldown_seconds" json:"cooldown_seconds"`
-		GlobalMinGapSeconds int    `yaml:"global_min_gap_seconds" json:"global_min_gap_seconds"`
-		BaseURL             string `yaml:"base_url" json:"base_url"`
+		Provider            string   `yaml:"provider" json:"provider"`
+		CooldownSeconds     int      `yaml:"cooldown_seconds" json:"cooldown_seconds"`
+		GlobalMinGapSeconds int      `yaml:"global_min_gap_seconds" json:"global_min_gap_seconds"`
+		BaseURL             string   `yaml:"base_url" json:"base_url"`
+		Labels              []string `yaml:"labels" json:"labels"`
 		QuietHours          struct {
 			Start string `yaml:"start" json:"start"`
 			End   string `yaml:"end" json:"end"`
@@ -132,6 +156,7 @@ func (n *Notifications) UnmarshalYAML(value *yaml.Node) error {
 	n.CooldownSeconds = raw.CooldownSeconds
 	n.GlobalMinGapSeconds = raw.GlobalMinGapSeconds
 	n.BaseURL = raw.BaseURL
+	n.Labels = raw.Labels
 	n.QuietStart = raw.QuietHours.Start
 	n.QuietEnd = raw.QuietHours.End
 	return nil
@@ -179,23 +204,26 @@ func (c *Config) WithPlaceholdersResolved() *Config {
 func (c *Config) MissingSecrets(secrets map[string]string) []string {
 	seen := map[string]bool{}
 	var missing []string
-	walkStrings(reflect.ValueOf(c).Elem(), func(s string) string {
+	walkStrings(reflect.ValueOf(c).Elem(), func(orig string) string {
+		// walkStrings writes the callback's return value back into the
+		// config, so this must hand back orig untouched and scan a copy.
+		rest := orig
 		for {
-			i := strings.Index(s, SecretPrefix)
+			i := strings.Index(rest, SecretPrefix)
 			if i < 0 {
-				return s
+				return orig
 			}
-			rest := s[i+len(SecretPrefix):]
+			rest = rest[i+len(SecretPrefix):]
 			j := strings.Index(rest, "}")
 			if j < 0 {
-				return s
+				return orig
 			}
 			key := rest[:j]
 			if _, ok := secrets[key]; !ok && !seen[key] {
 				seen[key] = true
 				missing = append(missing, key)
 			}
-			s = rest[j+1:]
+			rest = rest[j+1:]
 		}
 	})
 	sort.Strings(missing)
@@ -224,6 +252,7 @@ func (n Notifications) MarshalYAML() (any, error) {
 		"cooldown_seconds":       n.CooldownSeconds,
 		"global_min_gap_seconds": n.GlobalMinGapSeconds,
 		"base_url":               n.BaseURL,
+		"labels":                 n.Labels,
 		"quiet_hours": map[string]string{
 			"start": n.QuietStart,
 			"end":   n.QuietEnd,

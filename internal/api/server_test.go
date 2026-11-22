@@ -356,3 +356,36 @@ func TestSetTokenRotatesAuth(t *testing.T) {
 		t.Fatalf("empty token must be rejected, got %d", r.StatusCode)
 	}
 }
+
+// A successful config PUT must write the camera URLs back exactly as sent,
+// secret placeholders intact (regression: they were being stripped).
+func TestConfigPutKeepsSecretPlaceholdersOnDisk(t *testing.T) {
+	srv, ts := setup(t)
+	_, cfgBody := get(t, ts.URL+"/api/config", "sekrit")
+	req, _ := http.NewRequest("PUT", ts.URL+"/api/config", strings.NewReader(string(cfgBody)))
+	req.Header.Set("X-Api-Token", "sekrit")
+	req.Header.Set("Content-Type", "application/json")
+	r, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.StatusCode != http.StatusAccepted {
+		t.Fatalf("PUT: %d %s", r.StatusCode, readAll(r))
+	}
+	disk, err := os.ReadFile(filepath.Join(srv.cfgDir, "config.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"rtsp://${secret:cam_user}:${secret:cam_pass}@10.0.0.1/main",
+		"rtsp://${secret:cam_user}:${secret:cam_pass}@10.0.0.1/sub",
+	} {
+		if !strings.Contains(string(disk), want) {
+			t.Fatalf("config.yaml lost %q after a save:\n%s", want, disk)
+		}
+	}
+	// and the file must still load (this is what a restart does)
+	if _, err := config.Load(srv.cfgDir); err != nil {
+		t.Fatalf("config written by PUT does not load: %v", err)
+	}
+}

@@ -149,3 +149,73 @@ func TestPruneReportsCropAsset(t *testing.T) {
 }
 
 func strPtr(s string) *string { return &s }
+
+func TestPushSubscriptions(t *testing.T) {
+	st, err := Open(filepath.Join(t.TempDir(), "e.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+
+	if n, _ := st.CountPushSubs(); n != 0 {
+		t.Fatalf("fresh db should have 0 subs, got %d", n)
+	}
+	a := PushSub{Endpoint: "https://push.example/a", P256dh: "k1", Auth: "a1", UserAgent: "ua"}
+	if err := st.UpsertPushSub(a); err != nil {
+		t.Fatal(err)
+	}
+	// re-subscribing the same endpoint refreshes keys, no duplicate row
+	a.P256dh, a.Auth = "k2", "a2"
+	if err := st.UpsertPushSub(a); err != nil {
+		t.Fatal(err)
+	}
+	st.UpsertPushSub(PushSub{Endpoint: "https://push.example/b", P256dh: "kb", Auth: "ab"})
+
+	subs, err := st.ListPushSubs()
+	if err != nil || len(subs) != 2 {
+		t.Fatalf("want 2 subs, got %d (%v)", len(subs), err)
+	}
+	if subs[0].Endpoint != a.Endpoint || subs[0].P256dh != "k2" || subs[0].Auth != "a2" {
+		t.Fatalf("upsert should refresh keys: %+v", subs[0])
+	}
+	if subs[0].LastOKAt != nil {
+		t.Fatal("last_ok_at must start null")
+	}
+	if err := st.MarkPushOK(a.Endpoint); err != nil {
+		t.Fatal(err)
+	}
+	subs, _ = st.ListPushSubs()
+	if subs[0].LastOKAt == nil {
+		t.Fatal("MarkPushOK should set last_ok_at")
+	}
+
+	if err := st.DeletePushSub(a.Endpoint); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.DeletePushSub("https://push.example/never"); err != nil {
+		t.Fatalf("deleting an unknown endpoint must not error: %v", err)
+	}
+	if n, _ := st.CountPushSubs(); n != 1 {
+		t.Fatalf("want 1 sub left, got %d", n)
+	}
+}
+
+func TestSettings(t *testing.T) {
+	st, err := Open(filepath.Join(t.TempDir(), "s.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	if _, ok, err := st.GetSetting("k"); ok || err != nil {
+		t.Fatalf("unset key: ok=%v err=%v", ok, err)
+	}
+	if err := st.SetSetting("k", "1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetSetting("k", "2"); err != nil {
+		t.Fatal(err)
+	}
+	if v, ok, _ := st.GetSetting("k"); !ok || v != "2" {
+		t.Fatalf("want 2, got %q ok=%v", v, ok)
+	}
+}

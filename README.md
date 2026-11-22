@@ -190,6 +190,21 @@ ACC's charging-control support differs from phone to phone, so check its documen
 
 Put `ntfy_topic_url`, or `telegram_bot_token` and `telegram_chat_id`, into the Secrets editor, then enable the provider in Settings. For access from outside your home, use Tailscale, or the Cloudflare Tunnel setup in [deploy/cloudflare/](deploy/cloudflare/README.md). Never forward port 8099 to the internet.
 
+### Which events alert, and muting
+
+- **People only by default.** `notifications.labels` (default `[person]`) lists the detection classes that send an alert on any channel (push, ntfy, Telegram). Cats, dogs, cars and plain motion are still detected, stored and shown in the UI; they just don't notify. Edit it in Settings → Notifications → "notify for", or add e.g. `dog` to the list.
+- **Mute.** The Home page has **Mute 1 hour / 8 hours / Until I turn on** buttons (and **Turn alerts on**). A mute silences every channel, survives restarts, and muted events are still recorded. API: `GET/POST /api/notifications/mute` with `{"minutes": N}` (`-1` = until turned on, `0` = unmute).
+- To stop alerts on one device only, use **Turn off** under Settings → Push notifications.
+
+### Push notifications in the PWA (optional)
+
+The web UI can notify this device directly with **Web Push**, no ntfy or Telegram app needed. Open the installed PWA, go to **Settings → Push notifications** and tap **Enable notifications**. `nvrd` creates a VAPID key pair on first start (`vapid_public` / `vapid_private` in `secrets.yaml`), stores each device's subscription in SQLite and pushes every event to it. The payload is end-to-end encrypted, so the push service (Google, Apple or Mozilla) cannot read it. It works through the Cloudflare tunnel because the phone only makes outbound connections.
+
+- **iPhone/iPad:** Web Push works only for a PWA added to the Home Screen (iOS 16.4+), not in a Safari tab. iOS ignores the snapshot image.
+- **Android:** the notification shows the snapshot when `notifications.base_url` is set.
+- Cooldowns and quiet hours apply, same as ntfy/Telegram. Use **Send test** to check a device.
+- It runs alongside ntfy/Telegram; each subscribed device is the opt-in.
+
 ### Troubleshooting
 
 | Symptom | Fix |
@@ -243,6 +258,9 @@ All routes require the token (except the static app shell). Highlights:
 | `GET /api/events/stream` | Server-sent events for live UI updates |
 | `GET /api/live/hls/{camera}/…`, `POST /api/live/whep/{camera}` | Proxied HLS / WHEP signaling for live view |
 | `GET /api/playback/{camera}/list` · `/api/playback/{camera}/get` | Recordings browser + fMP4 windows for the timeline scrubber (proxied from MediaMTX's playback server) |
+| `GET/POST /api/notifications/mute` | Read or set the global alert mute (`{"minutes": N}`) |
+| `GET /api/push/vapid-key` · `GET /api/push/status` | Web Push public key + subscribed-device count |
+| `POST /api/push/subscribe` · `/unsubscribe` · `/test` | Register or remove this device; send a test notification |
 | `GET /api/metrics` | Event counters + detector gauges (fps, queue, thermals) |
 
 ## Performance

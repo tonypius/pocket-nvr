@@ -12,7 +12,9 @@ import (
 	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"pocketnvr/internal/config"
@@ -23,6 +25,7 @@ type Item struct {
 	EventID  int64
 	CameraID string
 	Camera   string // human name
+	Label    string // detection class ("person"); empty = person
 	Score    float64
 	StartTS  int64 // epoch ms
 	Snapshot []byte
@@ -43,9 +46,14 @@ type Service struct {
 	lastPerCa map[string]time.Time
 	lastAny   time.Time
 
+	// muteUntil silences all alerts: 0 = not muted, -1 = until switched back
+	// on, otherwise epoch ms. Runtime state (persisted by the caller).
+	muteUntil atomic.Int64
+
 	cfg       func() *config.Config
 	token     func(key string) string
 	providers []Notifier
+	push      PushStore // Web Push subscriptions; nil = Web Push off
 	store     NotifiedMarker
 	logger    *slog.Logger
 	client    *http.Client
@@ -70,11 +78,20 @@ func New(cfg func() *config.Config, token func(string) string,
 		q:         make(chan Item, 256),
 		nowFn:     time.Now,
 	}
-	s.rebuildProviders()
+	// quiet: the Web Push store is wired right after construction, so an
+	// empty provider list here is not yet a misconfiguration worth a warning
+	s.buildProviders()
 	return s
 }
 
 func (s *Service) rebuildProviders() {
+	s.buildProviders()
+	if len(s.providers) == 0 {
+		s.logger.Warn("no notification provider configured (check secrets + notifications.provider)")
+	}
+}
+
+func (s *Service) buildProviders() {
 	c := s.cfg()
 	var ps []Notifier
 	if c.Notifications.Provider == "ntfy" || c.Notifications.Provider == "both" {
@@ -87,10 +104,10 @@ func (s *Service) rebuildProviders() {
 			ps = append(ps, &telegram{token: tok, chatID: s.token("telegram_chat_id"), client: s.client})
 		}
 	}
-	s.providers = ps
-	if len(ps) == 0 {
-		s.logger.Warn("no notification provider configured (check secrets + notifications.provider)")
+	if w := s.newWebPush(); w != nil {
+		ps = append(ps, w)
 	}
+	s.providers = ps
 }
 
 // Reload re-reads provider config (SIGHUP path).
@@ -144,6 +161,20 @@ func inQuietHours(now time.Time, startMin, endMin int) bool {
 // still stored — the caller persisted them already; suppression only skips
 // the push, and is marked to avoid replay.
 func (s *Service) Enqueue(it Item) (delivered bool, reason string) {
+	// Only the configured classes alert (people by default). Everything else
+	// is still stored; mark it so it isn't replayed after a restart.
+	if !s.cfg().Notifications.NotifyLabel(it.Label) {
+		if err := s.store.MarkNotified(it.EventID); err != nil {
+			s.logger.Error("mark unwanted-label event", "err", err)
+		}
+		return false, "label not notified: " + labelOrPerson(it.Label)
+	}
+	if s.Muted(s.nowFn()) {
+		if err := s.store.MarkNotified(it.EventID); err != nil {
+			s.logger.Error("mark muted event", "err", err)
+		}
+		return false, "alerts muted"
+	}
 	if !s.hasProviders() {
 		if err := s.store.MarkNotified(it.EventID); err != nil {
 			s.logger.Error("mark event (no providers)", "err", err)
@@ -231,8 +262,28 @@ func join(parts []string) string {
 	return out
 }
 
+func labelOrPerson(l string) string {
+	if strings.TrimSpace(l) == "" {
+		return "person"
+	}
+	return l
+}
+
+// SetMuteUntil sets the global mute: 0 clears it, -1 mutes until cleared,
+// otherwise epoch milliseconds.
+func (s *Service) SetMuteUntil(ms int64) { s.muteUntil.Store(ms) }
+
+// MuteUntil returns the raw mute value (see SetMuteUntil).
+func (s *Service) MuteUntil() int64 { return s.muteUntil.Load() }
+
+// Muted reports whether alerts are silenced at time now.
+func (s *Service) Muted(now time.Time) bool {
+	m := s.muteUntil.Load()
+	return m == -1 || (m > 0 && now.UnixMilli() < m)
+}
+
 func caption(it Item) string {
-	msg := fmt.Sprintf("%s — person detected (%.0f%%)", it.Camera, it.Score*100)
+	msg := fmt.Sprintf("%s — %s detected (%.0f%%)", it.Camera, labelOrPerson(it.Label), it.Score*100)
 	t := time.UnixMilli(it.StartTS).Format("15:04:05")
 	msg += " at " + t
 	if it.DeepLink != "" {

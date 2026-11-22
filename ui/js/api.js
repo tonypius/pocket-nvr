@@ -20,9 +20,26 @@ export async function api(path, opts = {}) {
     document.dispatchEvent(new CustomEvent("pnvr:unauthorized"));
     throw new Error("unauthorized");
   }
-  if (!r.ok) throw new Error((await r.text()) || String(r.status));
+  if (!r.ok) throw new Error(await errorText(r));
   const ct = r.headers.get("content-type") || "";
   return ct.includes("json") ? r.json() : r;
+}
+
+// Turn a failed response into a short, readable message. Proxies (Cloudflare)
+// answer with whole HTML pages; showing those verbatim buries the page.
+async function errorText(r) {
+  let body = "";
+  try { body = (await r.text()).trim(); } catch (e) { /* ignore */ }
+  const ct = r.headers.get("content-type") || "";
+  if (ct.includes("json")) {
+    try { const j = JSON.parse(body); if (j && j.error) return String(j.error); } catch (e) { /* fall through */ }
+  }
+  if (!body || ct.includes("html") || body.startsWith("<")) {
+    const why = r.status === 502 || r.status === 504 || r.status === 503
+      ? "the NVR is unreachable (gateway error)" : "request failed";
+    return `${why} — HTTP ${r.status}`;
+  }
+  return body.length > 200 ? body.slice(0, 200) + "…" : body;
 }
 
 export const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>

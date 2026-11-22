@@ -133,6 +133,20 @@ func (c *Config) applyDefaults() {
 	if n.GlobalMinGapSeconds == 0 {
 		n.GlobalMinGapSeconds = 30
 	}
+	// notify on people only unless told otherwise; normalise the list
+	seen := map[string]bool{}
+	var labels []string
+	for _, l := range n.Labels {
+		l = strings.ToLower(strings.TrimSpace(l))
+		if l != "" && !seen[l] {
+			seen[l] = true
+			labels = append(labels, l)
+		}
+	}
+	if len(labels) == 0 {
+		labels = []string{"person"}
+	}
+	n.Labels = labels
 
 	a := &c.API
 	if a.Bind == "" {

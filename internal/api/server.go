@@ -54,7 +54,13 @@ type Server struct {
 	// eventHandler fires after each stored detector event. Guarded by
 	// swapMu for SIGHUP reloads.
 	swapMu       sync.RWMutex
-	eventHandler func(cameraID, cameraName string, eventID, startTS, endTS int64, score float64, snapshot []byte)
+	eventHandler func(cameraID, cameraName, label string, eventID, startTS, endTS int64, score float64, snapshot []byte)
+	// notification mute (global snooze): raw value get/set, see handleMute
+	muteGet func() int64
+	muteSet func(int64) error
+	// Web Push (PWA notifications): VAPID public key + test hook.
+	pushKey  func() string
+	pushTest func(context.Context) (int, error)
 	// SSE live event push (B3)
 	sseMu      sync.Mutex
 	sseClients []chan []byte
@@ -95,7 +101,7 @@ func (s *Server) SwapConfig(cfg *config.Config, redactor *config.Redactor) {
 }
 
 // SetEventHandler registers the post-store callback for detector events.
-func (s *Server) SetEventHandler(fn func(cameraID, cameraName string, eventID, startTS, endTS int64, score float64, snapshot []byte)) {
+func (s *Server) SetEventHandler(fn func(cameraID, cameraName, label string, eventID, startTS, endTS int64, score float64, snapshot []byte)) {
 	s.swapMu.Lock()
 	defer s.swapMu.Unlock()
 	s.eventHandler = fn
@@ -110,6 +116,13 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/config", s.handleConfigPut)
 	mux.HandleFunc("POST /api/secrets", s.handleSecretsPost)
 	mux.HandleFunc("POST /api/discover", s.handleDiscover)
+	mux.HandleFunc("GET /api/notifications/mute", s.handleMuteGet)
+	mux.HandleFunc("POST /api/notifications/mute", s.handleMutePost)
+	mux.HandleFunc("GET /api/push/vapid-key", s.handlePushVAPIDKey)
+	mux.HandleFunc("GET /api/push/status", s.handlePushStatus)
+	mux.HandleFunc("POST /api/push/subscribe", s.handlePushSubscribe)
+	mux.HandleFunc("POST /api/push/unsubscribe", s.handlePushUnsubscribe)
+	mux.HandleFunc("POST /api/push/test", s.handlePushTest)
 	mux.HandleFunc("GET /api/events/stream", s.handleEventsStream)
 	mux.HandleFunc("GET /api/cameras", s.handleCameras)
 	mux.HandleFunc("GET /api/events", s.handleEvents)
@@ -664,7 +677,7 @@ func (s *Server) handleEventPost(w http.ResponseWriter, r *http.Request) {
 		if in.EndTS != nil {
 			endTS = *in.EndTS
 		}
-		fn(in.CameraID, camName, id, in.StartTS, endTS, in.Score, snapBytes)
+		fn(in.CameraID, camName, in.Label, id, in.StartTS, endTS, in.Score, snapBytes)
 	}
 
 	// B3: broadcast to SSE clients (UI event rail + live counters)

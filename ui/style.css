@@ -251,3 +251,11 @@ h3.sec { font-size: 13px; margin: 20px 0 8px; color: var(--dim);
   font-size: 12px; }
 .clip-label { color: var(--ok); font-weight: 600; }
 .clip-when { color: var(--dim); }
+
+/* alert mute bar (Home) */
+.alertbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 10px 12px; margin-bottom: 4px; border: 1px solid var(--line, #2a2f35);
+  border-radius: 10px; }
+.alertbar .alert-state { flex: 1 1 160px; font-size: 13px; }
+.alertbar .alert-state.on { color: var(--ok); }
+.alertbar .alert-state.off { color: var(--warn); }
