@@ -162,6 +162,10 @@ async function saveAll(page) {
     st.textContent = "saving…";
     for (const row of $$("#cfg-secrets .secret", page)) {
       const [k, v] = row.querySelectorAll("input");
+      // a half-filled row used to be dropped silently, leaving the camera
+      // referencing a secret that never got saved
+      if (k.value && !v.value) throw new Error(`secret "${k.value}" has no value`);
+      if (!k.value && v.value) throw new Error("a secret value has no key");
       if (k.value && v.value) secretsToSave[k.value] = v.value;
     }
     if (Object.keys(secretsToSave).length)

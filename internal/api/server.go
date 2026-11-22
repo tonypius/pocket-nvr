@@ -5,10 +5,11 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
-	"io"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -83,6 +84,10 @@ func New(cfg *config.Config, redactor *config.Redactor, token string, st *store.
 	return s
 }
 
+// SetToken installs a reloaded API token (secrets are re-read on SIGHUP, so
+// a rotated api_token takes effect without restarting nvrd).
+func (s *Server) SetToken(t string) { s.token.Store(&t) }
+
 // SwapConfig installs a reloaded config (FR-API-4 reload path).
 func (s *Server) SwapConfig(cfg *config.Config, redactor *config.Redactor) {
 	s.cfg.Store(cfg)
@@ -147,7 +152,8 @@ func (s *Server) auth(next http.Handler) http.Handler {
 			if got == "" {
 				got = r.URL.Query().Get("token")
 			}
-			if got != tok {
+			// constant-time compare: the token guards the whole API
+			if subtle.ConstantTimeCompare([]byte(got), []byte(tok)) != 1 {
 				w.Header().Set("WWW-Authenticate", `Bearer realm="pocketnvr"`)
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
@@ -240,13 +246,30 @@ func (s *Server) handleConfigPut(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
 	}
-	y, err := yaml.Marshal(&cfg)
+	if s.cfgDir == "" {
+		http.Error(w, "config dir not configured", 500)
+		return
+	}
+	// A reload refuses any config that references an undefined secret and
+	// keeps the old one in memory, so the save would look accepted while
+	// silently never applying. Reject it here, before touching disk, with
+	// the names the user still has to add under Secrets.
+	secrets, err := config.LoadSecrets(filepath.Join(s.cfgDir, "secrets.yaml"))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}
-	if s.cfgDir == "" {
-		http.Error(w, "config dir not configured", 500)
+	if missing := cfg.MissingSecrets(secrets); len(missing) > 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{
+			"error": "unknown secret(s): " + strings.Join(missing, ", ") +
+				" — add them under Secrets (key and value) in the same save",
+			"missing_secrets": missing,
+		})
+		return
+	}
+	y, err := yaml.Marshal(&cfg)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
 		return
 	}
 	dst := filepath.Join(s.cfgDir, "config.yaml")

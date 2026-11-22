@@ -127,6 +127,24 @@ static void testEventStateMachine() {
 	CHECK(!sm.active());
 }
 
+static void testForceCloseFlushesOpenEvent() {
+	// Shutdown/reload must not lose an in-flight event: ForceClose yields the
+	// completed record (start, peak, bbox) exactly once.
+	EventStateMachine sm(1, 8);
+	float bbox[4] = {5, 6, 7, 8};
+	CHECK(!sm.ForceClose(500)); // nothing open
+	CHECK(sm.OnFrame(true, 0.7f, bbox, 1000) == EventSignal::Entered);
+	CHECK(sm.OnFrame(true, 0.9f, bbox, 1200) == EventSignal::Active);
+	CHECK(sm.ForceClose(2000));
+	CHECK(!sm.active());
+	CHECK(sm.completed().start_ts == 1000);
+	CHECK(sm.completed().end_ts == 2000);
+	CHECK(sm.completed().peak_score == 0.9f);
+	CHECK(!sm.ForceClose(2100)); // already closed
+	// and the machine is reusable afterwards
+	CHECK(sm.OnFrame(true, 0.5f, bbox, 3000) == EventSignal::Entered);
+}
+
 static void testSilenceFeederClosesEventUnderBusyQueue() {
 	// Regression (soak-local-4cam-1h): camera 0 has an open event but its gate
 	// is silent, while cameras 1-3 keep the shared queue busy (a frame every
@@ -232,6 +250,7 @@ int main() {
 	testZones();
 	testEventStateMachine();
 	testSilenceFeederClosesEventUnderBusyQueue();
+	testForceCloseFlushesOpenEvent();
 	testFrameQueue();
 	testMockBackend();
 	if (failures == 0) {

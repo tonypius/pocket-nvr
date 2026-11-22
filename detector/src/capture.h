@@ -25,8 +25,11 @@ struct CamStats {
 
 class Capture {
 public:
+	// eventOpen (optional): while it reads true this camera has an open event,
+	// so frames skip the motion gate and every one is analysed.
 	Capture(CamCfg cfg, int slot, int frame_w, int frame_h,
-			FrameQueue& queue, const std::atomic<double>& fpsScale);
+			FrameQueue& queue, const std::atomic<double>& fpsScale,
+			const std::atomic<bool>* eventOpen = nullptr);
 	~Capture() { stop(); }
 
 	void start();
@@ -42,6 +45,7 @@ private:
 	int slot_, w_, h_;
 	FrameQueue& queue_;
 	const std::atomic<double>& fps_scale_;
+	const std::atomic<bool>* event_open_;
 	MotionGate gate_;
 	CamStats stats_;
 	std::thread th_;

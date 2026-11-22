@@ -91,7 +91,9 @@ fi
 	$BASE/bin/nvrd -config $BASE -check
 	# verify ELF magic on-device (kernel refuses wrong-arch binaries and the
 	# shell then misreads them as scripts)
-	for b in nvrd mediamtx nvrctl nvrdet ffmpeg cloudflared; do
+	# (nvrctl is a shell script, not an ELF — checking it made every
+	# install end in "BAD ELF: nvrctl" and never print INSTALL_OK)
+	for b in nvrd mediamtx nvrdet ffmpeg cloudflared; do
 		f=$BASE/bin/$b
 		[ -f "$f" ] || continue
 		h=$(head -c 4 "$f" | od -An -tx1 | tr -d ' ')

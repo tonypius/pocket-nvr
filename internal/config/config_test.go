@@ -141,3 +141,18 @@ func TestQuietMinutes(t *testing.T) {
 		t.Error("empty should be -1")
 	}
 }
+
+func TestMissingSecrets(t *testing.T) {
+	c := &Config{Cameras: []Camera{{
+		ID:         "a",
+		SourceMain: "rtsp://${secret:u}:${secret:p}@10.0.0.1/main",
+		SourceSub:  "rtsp://${secret:u}:${secret:zz}@10.0.0.1/sub",
+	}}}
+	got := c.MissingSecrets(map[string]string{"u": "x"})
+	if len(got) != 2 || got[0] != "p" || got[1] != "zz" {
+		t.Fatalf("want [p zz] (sorted, de-duplicated), got %v", got)
+	}
+	if m := c.MissingSecrets(map[string]string{"u": "1", "p": "2", "zz": "3"}); len(m) != 0 {
+		t.Fatalf("all defined, want none, got %v", m)
+	}
+}
