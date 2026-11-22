@@ -118,6 +118,20 @@ func TestAdvertisedHostIsRewritten(t *testing.T) {
 	}
 }
 
+func TestPrettyPrintedXAddrsStillFindPTZ(t *testing.T) {
+	cam := newCam(t, ptztest.Options{PanTilt: true, Zoom: true, PrettyXAddrs: true})
+	c := dial(t, cam)
+	if got := c.Capabilities(); got != (Caps{PanTilt: true, Zoom: true}) {
+		t.Fatalf("Capabilities = %+v, want pan/tilt and zoom (XAddr whitespace must be trimmed)", got)
+	}
+	if err := c.Move(testCtx(t), Left, 3*time.Second); err != nil {
+		t.Fatalf("Move: %v", err)
+	}
+	if n := len(cam.Moves()); n != 1 {
+		t.Errorf("Moves = %d, want 1", n)
+	}
+}
+
 func TestMoveVelocities(t *testing.T) {
 	cases := []struct {
 		dir             Direction

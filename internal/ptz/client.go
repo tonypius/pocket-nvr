@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -177,6 +178,9 @@ func finishDial(ctx context.Context, sc *soapClient, ep string, caps capabilitie
 // advertise internal or otherwise unreachable addresses. It returns "" for an
 // empty or unusable address.
 func rewriteXAddr(xaddr, endpoint string) string {
+	// encoding/xml keeps whitespace in character data, so a pretty-printed
+	// <XAddr> arrives padded with newlines and indentation.
+	xaddr = strings.TrimSpace(xaddr)
 	if xaddr == "" {
 		return ""
 	}

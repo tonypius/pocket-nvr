@@ -37,6 +37,9 @@ type Options struct {
 	// defaults to the non-routable 192.0.2.1, like cameras that advertise an
 	// internal address.
 	AdvertiseHost string
+	// PrettyXAddrs pads every advertised XAddr with newlines and indentation,
+	// like cameras that pretty-print their XML.
+	PrettyXAddrs bool
 }
 
 // Move is one recorded ContinuousMove request.
@@ -157,16 +160,24 @@ func (c *Camera) advertiseHost() string {
 	return "192.0.2.1"
 }
 
+// xaddr renders an advertised service address element.
+func (c *Camera) xaddr(path string) string {
+	u := "http://" + c.advertiseHost() + path
+	if c.opts.PrettyXAddrs {
+		u = "\n        " + u + "\n      "
+	}
+	return `<tt:XAddr>` + u + `</tt:XAddr>`
+}
+
 func (c *Camera) registerPTZOps() {
 	c.ops["GetCapabilities"] = operation{auth: true, handle: func(c *Camera, _ request) (string, *fault) {
-		h := c.advertiseHost()
 		ptz := ""
 		if !c.opts.NoPTZService {
-			ptz = `<tt:PTZ><tt:XAddr>http://` + h + `/onvif/ptz_service</tt:XAddr></tt:PTZ>`
+			ptz = `<tt:PTZ>` + c.xaddr("/onvif/ptz_service") + `</tt:PTZ>`
 		}
 		return `<tds:GetCapabilitiesResponse xmlns:tds="http://www.onvif.org/ver10/device/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema">` +
-			`<tds:Capabilities><tt:Device><tt:XAddr>http://` + h + `/onvif/device_service</tt:XAddr></tt:Device>` +
-			`<tt:Media><tt:XAddr>http://` + h + `/onvif/media_service</tt:XAddr></tt:Media>` + ptz +
+			`<tds:Capabilities><tt:Device>` + c.xaddr("/onvif/device_service") + `</tt:Device>` +
+			`<tt:Media>` + c.xaddr("/onvif/media_service") + `</tt:Media>` + ptz +
 			`</tds:Capabilities></tds:GetCapabilitiesResponse>`, nil
 	}}
 	c.ops["GetProfiles"] = operation{auth: true, handle: func(c *Camera, _ request) (string, *fault) {
