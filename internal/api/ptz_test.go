@@ -35,9 +35,28 @@ func deadONVIFURL(t *testing.T) string {
 	return "http://" + addr + "/onvif/device_service"
 }
 
+// silentONVIFURL returns a device-service URL whose server accepts
+// connections and never replies, like a filtered or hung camera. The listener
+// is closed on cleanup.
+func silentONVIFURL(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { l.Close() })
+	return "http://" + l.Addr().String() + "/onvif/device_service"
+}
+
 // setupPTZ builds a server whose camera "cam1" is the fake ONVIF camera and
 // whose camera "dead" has an ONVIF endpoint nobody answers on.
 func setupPTZ(t *testing.T, o ptztest.Options) (*Server, *httptest.Server, *ptztest.Camera) {
+	t.Helper()
+	return setupPTZDead(t, o, deadONVIFURL(t))
+}
+
+// setupPTZDead is setupPTZ with the "dead" camera's onvif_url given.
+func setupPTZDead(t *testing.T, o ptztest.Options, deadURL string) (*Server, *httptest.Server, *ptztest.Camera) {
 	t.Helper()
 	o.User, o.Pass = ptzCamUser, ptzCamPass
 	fake := ptztest.New(t, o)
@@ -58,7 +77,7 @@ cameras:
     sub_url: rtsp://127.0.0.1:8554/dead_sub
     source_main: rtsp://${secret:cam_user}:${secret:cam_pass}@10.0.0.2/main
     source_sub: rtsp://${secret:cam_user}:${secret:cam_pass}@10.0.0.2/sub
-    onvif_url: ` + deadONVIFURL(t) + `
+    onvif_url: ` + deadURL + `
 `
 	os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(cfgYAML), 0o600)
 	os.WriteFile(filepath.Join(dir, "secrets.yaml"),
@@ -215,7 +234,10 @@ func TestPTZErrors(t *testing.T) {
 }
 
 func TestCamerasListPTZFieldIsCacheOnly(t *testing.T) {
-	_, ts, _ := setupPTZ(t, ptztest.Options{PanTilt: true, Zoom: true})
+	// The dead camera accepts connections and never answers, so a handler
+	// that waited on its probe would block for the manager's whole 3 s probe
+	// timeout (a refused connection would fail instantly and prove nothing).
+	_, ts, _ := setupPTZDead(t, ptztest.Options{PanTilt: true, Zoom: true}, silentONVIFURL(t))
 	cams := func() map[string]map[string]any {
 		t.Helper()
 		start := time.Now()
@@ -252,8 +274,14 @@ func TestCamerasListPTZFieldIsCacheOnly(t *testing.T) {
 	}
 }
 
+const deadURLPass = "L3akyD34dP4ss"
+
 func TestPTZNeverLeaksCredentials(t *testing.T) {
-	_, ts, _ := setupPTZ(t, ptztest.Options{PanTilt: true, Zoom: true})
+	// The dead camera's onvif_url itself carries user:password.
+	deadURL := strings.Replace(deadONVIFURL(t), "http://", "http://deaduser:"+deadURLPass+"@", 1)
+	_, ts, _ := setupPTZDead(t, ptztest.Options{PanTilt: true}, deadURL)
+	_, ts2, _ := setupPTZ(t, ptztest.Options{NoPTZService: true})
+
 	var all []string
 	collect := func(_ *http.Response, b []byte) { all = append(all, string(b)) }
 	for _, id := range []string{"cam1", "dead", "nope"} {
@@ -263,11 +291,64 @@ func TestPTZNeverLeaksCredentials(t *testing.T) {
 		collect(post(t, ts.URL+"/api/cameras/"+id+"/ptz/stop", "sekrit", ""))
 	}
 	collect(get(t, ts.URL+"/api/cameras", "sekrit"))
+
+	// Exact bodies for each error class.
+	body := func(want int, wantBody string, resp *http.Response, b []byte) {
+		t.Helper()
+		collect(resp, b)
+		if resp.StatusCode != want {
+			t.Errorf("status = %d, want %d (%s)", resp.StatusCode, want, b)
+		}
+		if got := strings.TrimSpace(string(b)); got != wantBody {
+			t.Errorf("%d body = %q, want exactly %q", want, got, wantBody)
+		}
+	}
+	r, b := post(t, ts.URL+"/api/cameras/nope/ptz/move", "sekrit", `{"dir":"left"}`)
+	body(404, "unknown camera", r, b)
+	r, b = post(t, ts.URL+"/api/cameras/cam1/ptz/move", "sekrit", `{"dir":"sideways"}`)
+	body(400, "unknown direction", r, b)
+	r, b = post(t, ts.URL+"/api/cameras/cam1/ptz/move", "sekrit", `not json`)
+	body(400, "invalid JSON body", r, b)
+	r, b = post(t, ts.URL+"/api/cameras/dead/ptz/move", "sekrit", `{"dir":"left"}`)
+	body(502, "camera did not respond", r, b)
+	r, b = post(t, ts.URL+"/api/cameras/dead/ptz/stop", "sekrit", "")
+	body(502, "camera did not respond", r, b)
+	r, b = post(t, ts2.URL+"/api/cameras/cam1/ptz/move", "sekrit", `{"dir":"left"}`)
+	body(409, "camera has no PTZ", r, b)
+	r, b = post(t, ts.URL+"/api/cameras/cam1/ptz/move", "sekrit", `{"dir":"zoom_in"}`)
+	body(409, "camera does not support that movement", r, b)
+
 	for _, b := range all {
-		for _, secret := range []string{ptzCamPass, "Sup3r%24ecret", ptzCamUser} {
+		for _, secret := range []string{ptzCamPass, "Sup3r%24ecret", ptzCamUser, deadURLPass, "deaduser"} {
 			if strings.Contains(b, secret) {
 				t.Errorf("response leaks %q: %s", secret, b)
 			}
 		}
+	}
+}
+
+func TestSwapConfigResetsPTZ(t *testing.T) {
+	srv, ts, fake := setupPTZ(t, ptztest.Options{PanTilt: true, Zoom: true})
+	if r, b := get(t, ts.URL+"/api/cameras/cam1/ptz", "sekrit"); r.StatusCode != 200 {
+		t.Fatalf("caps status = %d: %s", r.StatusCode, b)
+	}
+	probed := fake.Requests()
+	if probed == 0 {
+		t.Fatal("expected the first lookup to probe the fake")
+	}
+	// Cached: a second lookup makes no request.
+	get(t, ts.URL+"/api/cameras/cam1/ptz", "sekrit")
+	if got := fake.Requests(); got != probed {
+		t.Fatalf("requests %d -> %d: capabilities were not cached", probed, got)
+	}
+
+	// Reload with an identical config: only Reset (not a changed target) can
+	// make the camera be probed again.
+	srv.SwapConfig(srv.cfg.Load(), srv.redact.Load())
+	if r, b := get(t, ts.URL+"/api/cameras/cam1/ptz", "sekrit"); r.StatusCode != 200 {
+		t.Fatalf("caps status after swap = %d: %s", r.StatusCode, b)
+	}
+	if got := fake.Requests(); got <= probed {
+		t.Errorf("requests stayed at %d after SwapConfig: the PTZ cache was not reset", got)
 	}
 }
