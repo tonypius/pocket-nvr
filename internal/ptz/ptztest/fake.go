@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -25,7 +26,31 @@ type Options struct {
 	// e.g. "GetSystemDateAndTime") for the given duration, or until the
 	// client disconnects or the camera is closed.
 	Delay map[string]time.Duration
+
+	// PanTilt and Zoom make the PTZ node advertise continuous pan/tilt and
+	// continuous zoom velocity spaces respectively.
+	PanTilt, Zoom bool
+	// NoPTZService omits the PTZ service from GetCapabilities and the PTZ
+	// configuration from every profile.
+	NoPTZService bool
+	// AdvertiseHost is the host placed in advertised service XAddrs. It
+	// defaults to the non-routable 192.0.2.1, like cameras that advertise an
+	// internal address.
+	AdvertiseHost string
 }
+
+// Move is one recorded ContinuousMove request.
+type Move struct {
+	Pan, Tilt, Zoom float64
+	Timeout         string // xsd:duration as sent, e.g. "PT3S"
+}
+
+const (
+	// ptzProfileToken is the only profile carrying a PTZ configuration; the
+	// first profile deliberately has none.
+	ptzProfileToken   = "profile_ptz"
+	videoProfileToken = "profile_video"
+)
 
 // Camera is a running fake ONVIF camera.
 type Camera struct {
@@ -37,6 +62,12 @@ type Camera struct {
 	done chan struct{} // closed on shutdown to release delayed handlers
 	reqs atomic.Int64
 	ops  map[string]operation
+
+	mu       sync.Mutex // guards the fields below
+	moves    []Move
+	stops    int
+	inflight int // PTZ requests currently being served
+	maxConc  int
 }
 
 // request is what an operation handler sees.
@@ -52,6 +83,7 @@ type request struct {
 // operations in registerOps.
 type operation struct {
 	auth   bool
+	ptz    bool // counted by MaxConcurrent
 	handle func(c *Camera, r request) (string, *fault)
 }
 
@@ -74,6 +106,28 @@ func New(t testing.TB, o Options) *Camera {
 // Requests returns the number of SOAP requests served so far.
 func (c *Camera) Requests() int { return int(c.reqs.Load()) }
 
+// Moves returns the ContinuousMove requests received so far, in order.
+func (c *Camera) Moves() []Move {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return append([]Move(nil), c.moves...)
+}
+
+// Stops returns the number of Stop requests received so far.
+func (c *Camera) Stops() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.stops
+}
+
+// MaxConcurrent returns the peak number of PTZ requests (ContinuousMove,
+// Stop) that were in flight at the same time.
+func (c *Camera) MaxConcurrent() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.maxConc
+}
+
 // now is the camera's clock.
 func (c *Camera) now() time.Time { return time.Now().Add(c.opts.ClockSkew) }
 
@@ -87,11 +141,96 @@ func (c *Camera) registerOps() {
 			`</tds:SystemDateAndTime></tds:GetSystemDateAndTimeResponse>`,
 			t.Hour(), t.Minute(), t.Second(), t.Year(), int(t.Month()), t.Day()), nil
 	}}
+	c.registerPTZOps()
 	c.ops["GetDeviceInformation"] = operation{auth: true, handle: func(c *Camera, _ request) (string, *fault) {
 		return `<tds:GetDeviceInformationResponse xmlns:tds="http://www.onvif.org/ver10/device/wsdl">` +
 			`<tds:Manufacturer>FakeCam</tds:Manufacturer><tds:Model>F1</tds:Model>` +
 			`<tds:FirmwareVersion>1.0</tds:FirmwareVersion><tds:SerialNumber>0001</tds:SerialNumber>` +
 			`<tds:HardwareId>fake</tds:HardwareId></tds:GetDeviceInformationResponse>`, nil
+	}}
+}
+
+func (c *Camera) advertiseHost() string {
+	if c.opts.AdvertiseHost != "" {
+		return c.opts.AdvertiseHost
+	}
+	return "192.0.2.1"
+}
+
+func (c *Camera) registerPTZOps() {
+	c.ops["GetCapabilities"] = operation{auth: true, handle: func(c *Camera, _ request) (string, *fault) {
+		h := c.advertiseHost()
+		ptz := ""
+		if !c.opts.NoPTZService {
+			ptz = `<tt:PTZ><tt:XAddr>http://` + h + `/onvif/ptz_service</tt:XAddr></tt:PTZ>`
+		}
+		return `<tds:GetCapabilitiesResponse xmlns:tds="http://www.onvif.org/ver10/device/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema">` +
+			`<tds:Capabilities><tt:Device><tt:XAddr>http://` + h + `/onvif/device_service</tt:XAddr></tt:Device>` +
+			`<tt:Media><tt:XAddr>http://` + h + `/onvif/media_service</tt:XAddr></tt:Media>` + ptz +
+			`</tds:Capabilities></tds:GetCapabilitiesResponse>`, nil
+	}}
+	c.ops["GetProfiles"] = operation{auth: true, handle: func(c *Camera, _ request) (string, *fault) {
+		cfg := ""
+		if !c.opts.NoPTZService {
+			cfg = `<tt:PTZConfiguration token="ptzcfg"><tt:Name>PTZ</tt:Name><tt:NodeToken>node1</tt:NodeToken></tt:PTZConfiguration>`
+		}
+		return `<trt:GetProfilesResponse xmlns:trt="http://www.onvif.org/ver10/media/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema">` +
+			`<trt:Profiles token="` + videoProfileToken + `" fixed="true"><tt:Name>video</tt:Name></trt:Profiles>` +
+			`<trt:Profiles token="` + ptzProfileToken + `" fixed="true"><tt:Name>ptz</tt:Name>` + cfg + `</trt:Profiles>` +
+			`</trt:GetProfilesResponse>`, nil
+	}}
+	c.ops["GetNodes"] = operation{auth: true, handle: func(c *Camera, _ request) (string, *fault) {
+		spaces := `<tt:AbsolutePanTiltPositionSpace><tt:URI>http://www.onvif.org/ver10/tptz/PanTiltSpaces/PositionGenericSpace</tt:URI></tt:AbsolutePanTiltPositionSpace>`
+		if c.opts.PanTilt {
+			spaces += `<tt:ContinuousPanTiltVelocitySpace><tt:URI>http://www.onvif.org/ver10/tptz/PanTiltSpaces/VelocityGenericSpace</tt:URI></tt:ContinuousPanTiltVelocitySpace>`
+		}
+		if c.opts.Zoom {
+			spaces += `<tt:ContinuousZoomVelocitySpace><tt:URI>http://www.onvif.org/ver10/tptz/ZoomSpaces/VelocityGenericSpace</tt:URI></tt:ContinuousZoomVelocitySpace>`
+		}
+		return `<tptz:GetNodesResponse xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema">` +
+			`<tptz:PTZNode token="node1"><tt:Name>node</tt:Name><tt:SupportedPTZSpaces>` + spaces + `</tt:SupportedPTZSpaces>` +
+			`</tptz:PTZNode></tptz:GetNodesResponse>`, nil
+	}}
+	c.ops["ContinuousMove"] = operation{auth: true, ptz: true, handle: func(c *Camera, r request) (string, *fault) {
+		var req struct {
+			Profile  string `xml:"ProfileToken"`
+			Velocity struct {
+				PanTilt struct {
+					X float64 `xml:"x,attr"`
+					Y float64 `xml:"y,attr"`
+				} `xml:"PanTilt"`
+				Zoom struct {
+					X float64 `xml:"x,attr"`
+				} `xml:"Zoom"`
+			} `xml:"Velocity"`
+			Timeout string `xml:"Timeout"`
+		}
+		// The inner XML has several top-level elements; wrap it so it parses.
+		if err := xml.Unmarshal([]byte("<r>"+string(r.Inner)+"</r>"), &req); err != nil {
+			return "", &fault{"ter:InvalidArgVal", "malformed ContinuousMove"}
+		}
+		if req.Profile != ptzProfileToken {
+			return "", &fault{"ter:NoProfile", "profile does not exist or has no PTZ configuration"}
+		}
+		c.mu.Lock()
+		c.moves = append(c.moves, Move{Pan: req.Velocity.PanTilt.X, Tilt: req.Velocity.PanTilt.Y, Zoom: req.Velocity.Zoom.X, Timeout: req.Timeout})
+		c.mu.Unlock()
+		return `<tptz:ContinuousMoveResponse xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl"/>`, nil
+	}}
+	c.ops["Stop"] = operation{auth: true, ptz: true, handle: func(c *Camera, r request) (string, *fault) {
+		var req struct {
+			Profile string `xml:"ProfileToken"`
+		}
+		if err := xml.Unmarshal([]byte("<r>"+string(r.Inner)+"</r>"), &req); err != nil {
+			return "", &fault{"ter:InvalidArgVal", "malformed Stop"}
+		}
+		if req.Profile != ptzProfileToken {
+			return "", &fault{"ter:NoProfile", "profile does not exist or has no PTZ configuration"}
+		}
+		c.mu.Lock()
+		c.stops++
+		c.mu.Unlock()
+		return `<tptz:StopResponse xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl"/>`, nil
 	}}
 }
 
@@ -118,6 +257,20 @@ func (c *Camera) serve(w http.ResponseWriter, r *http.Request) {
 		writeFault(w, &fault{"ter:InvalidArgs", "malformed SOAP request"})
 		return
 	}
+	op, ok := c.ops[env.Body.Op.XMLName.Local]
+	if ok && op.ptz {
+		c.mu.Lock()
+		c.inflight++
+		if c.inflight > c.maxConc {
+			c.maxConc = c.inflight
+		}
+		c.mu.Unlock()
+		defer func() {
+			c.mu.Lock()
+			c.inflight--
+			c.mu.Unlock()
+		}()
+	}
 	if d := c.opts.Delay[env.Body.Op.XMLName.Local]; d > 0 {
 		select {
 		case <-time.After(d):
@@ -127,7 +280,6 @@ func (c *Camera) serve(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	op, ok := c.ops[env.Body.Op.XMLName.Local]
 	if !ok {
 		writeFault(w, &fault{"ter:ActionNotSupported", "unsupported operation " + env.Body.Op.XMLName.Local})
 		return
