@@ -18,7 +18,7 @@ It is **not an Android app**. It is a set of native arm64 Linux daemons that run
 - **On-device detection** — ffmpeg capture pipes from the camera sub-stream, motion pre-gating, YOLO11n inference (CPU fp16 by default, Vulkan optional), configurable detection zones and object classes (person, cat, dog, car)
 - **Events** — SQLite event store, peak-frame snapshot with detection-box overlay, cropped object thumbnails, per-event MP4 clips
 - **Notifications** — ntfy and/or Telegram with score thresholds, cooldowns, quiet hours, and a retry queue that replays undelivered events after restart
-- **Web UI (PWA)** — installable from the browser; Home dashboard, Live view (WebRTC/WHEP with an HLS proxy fallback), Events, Detections grid, a Clips feed that plays event clips inline, and full Settings (camera add/edit, ONVIF/RTSP LAN discovery, secrets editor) — all hot-reloading, dark/light theme included
+- **Web UI (PWA)** — installable from the browser; Home dashboard, Live view (WebRTC/WHEP with an HLS proxy fallback), Events, Detections grid, a Clips feed that plays event clips inline, hold-to-move PTZ pan/tilt/zoom on the single-camera live view for ONVIF motorized cameras, and full Settings (camera add/edit, ONVIF/RTSP LAN discovery, secrets editor) — all hot-reloading, dark/light theme included
 - **Appliance ops** — boot-time auto-start + watchdog with restart backoff, log rotation, retention by age/size/count, free-space guard that pauses recording before the disk fills, SoC thermal governor, wakelock, and a configurable charge-cap setting for 24/7 unattended duty
 - **Security** — token auth on every API route, write-only secrets, redacted config reads; remote access via Tailscale or any TCP-only tunnel (the HLS proxy works where WebRTC UDP cannot)
 
@@ -221,12 +221,30 @@ cameras:
       zones: []          # empty = whole frame
 ```
 
+**PTZ (optional).** Motorized cameras need no extra config: the ONVIF endpoint is derived from the `source_main` host (port 2020 for Tapo, then 80 for CP Plus/Dahua) and reuses the credentials in `source_main`. If the camera uses a different port, path or ONVIF login, add an `onvif_url` to that camera: `onvif_url: http://${secret:front_user}:${secret:front_pass}@192.168.1.10:2020/onvif/device_service` (credentials in the URL are optional and default to `source_main`'s). Controls appear on the single-camera live view only for cameras that report PTZ. Presets and auto-tracking are not implemented.
+
 | Secret key | Purpose |
 |---|---|
 | `api_token` | **Required.** Auth for every `/api` route (`Authorization: Bearer`, `X-Api-Token`, or `?token=` for `<img>`/deep links) |
 | `mediamtx_viewer_pass` | MediaMTX viewer auth |
 | `<camera>_user` / `<camera>_pass` | Per-camera RTSP credentials |
 | `ntfy_topic_url`, `telegram_bot_token`, `telegram_chat_id` | Notification providers |
+
+### Verifying PTZ on a real camera
+
+The PTZ code is covered by unit tests against a fake ONVIF camera but has not been confirmed on real hardware. To check a motorized camera:
+
+1. Open **Live**, then open that camera's single-camera view. The six controls (pan left/right, tilt up/down, zoom in/out) should appear over the video.
+2. Hold each button: the camera should move the matching way (left pans left, up tilts up, zoom in magnifies). Release: it should stop promptly.
+3. Hold a button, then close the tab (or switch away from it) mid-move. The camera should stop within about 3 seconds, since the server auto-stops a move that is not renewed.
+4. Open a non-motorized camera: it should show no PTZ controls.
+
+If it fails:
+
+- No controls on a camera that has motors: the capability lookup (`GET /api/cameras/<id>/ptz`) is reporting no PTZ or cannot reach the camera. Confirm the camera account is allowed to use ONVIF: Tapo needs a **Camera Account**, CP Plus needs an **ONVIF user**, and the camera credentials in `source_main` must be that account.
+- Wrong port: ONVIF is on 2020 for Tapo and 80 for CP Plus/Dahua. Both are tried automatically; for anything else set `onvif_url`.
+- Authentication errors even with the right account: check the camera's clock (ONVIF logins are time-sensitive; enable NTP or set the date and time in the camera app).
+- Moves return `502`: the camera did not respond; check it is reachable from the phone and see `nvrctl logs`.
 
 ## API overview
 
