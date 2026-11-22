@@ -1,11 +1,11 @@
-// sw.js — v5: full shell precache, network-first (self-hosted app: updates
+// sw.js — v6: full shell precache, network-first (self-hosted app: updates
 // land on reload), /api and media never cached, update notification.
-const CACHE = "pocketnvr-v5";
+const CACHE = "pocketnvr-v6";
 const PRECACHE = [
   "/", "index.html", "style.css", "manifest.webmanifest",
   "icon-192.png", "icon-512.png", "apple-touch-icon.png",
   "vendor/hls.min.js",
-  "js/api.js", "js/theme.js", "js/pwa.js", "js/player.js", "js/main.js",
+  "js/api.js", "js/theme.js", "js/pwa.js", "js/player.js", "js/ptz.js", "js/main.js",
   "js/views/home.js", "js/views/live.js", "js/views/events.js", "js/views/settings.js",
   "js/views/detections.js", "js/views/timeline.js", "js/views/clips.js",
 ];
