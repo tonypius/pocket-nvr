@@ -243,8 +243,8 @@ If it fails:
 
 - No controls on a camera that has motors: the capability lookup (`GET /api/cameras/<id>/ptz`) is reporting no PTZ or cannot reach the camera. Confirm the camera account is allowed to use ONVIF: Tapo needs a **Camera Account**, CP Plus needs an **ONVIF user**, and the camera credentials in `source_main` must be that account.
 - Wrong port: ONVIF is on 2020 for Tapo and 80 for CP Plus/Dahua. Both are tried automatically; for anything else set `onvif_url`.
-- Authentication errors even with the right account: check the camera's clock (ONVIF logins are time-sensitive; enable NTP or set the date and time in the camera app).
-- Moves return `502`: the camera did not respond; check it is reachable from the phone and see `nvrctl logs`.
+- Controls missing, or "Camera didn't respond", even with the right account: an ONVIF login failure shows up as no controls (the capability lookup fails) or, on a move, as a bare `502`. Check the camera's clock (ONVIF logins are time-sensitive; enable NTP or set the date and time in the camera app).
+- Moves return `502` ("Camera didn't respond" in the UI): the camera did not answer; check it is reachable from the phone. PTZ failures are not written to the log at the default level, so the UI message and the HTTP status are the only symptoms.
 
 ## API overview
 
